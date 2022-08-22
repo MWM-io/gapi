@@ -9,7 +9,9 @@ import (
 func main() {
 	r := router.Create()
 
-	request.AddHandler(r, "GET", "/hello", internal.HelloWorldHandlerF())
+	request.AddHandler(r, "GET", "/json/hello", internal.JsonHelloWorldHandlerF())
+	request.AddHandler(r, "GET", "/xml/hello", internal.XmlHelloWorldHandlerF())
+	request.AddHandler(r, "GET", "/error/hello", internal.ErrorHelloWorldHandlerF())
 
 	router.Handle(r)
 }
