@@ -25,8 +25,8 @@ func (p PreProcessHandler) PreProcesses() []PreProcess {
 	return p.preProcesses
 }
 
-// PPH returns a new PreProcessHandler with the given preProcesses.
-func PPH(preProcesses ...PreProcess) PreProcessHandler {
+// PreProcessH returns a new PreProcessHandler with the given preProcesses.
+func PreProcessH(preProcesses ...PreProcess) PreProcessHandler {
 	return PreProcessHandler{
 		preProcesses: preProcesses,
 	}

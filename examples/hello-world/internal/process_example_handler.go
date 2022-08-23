@@ -6,23 +6,24 @@ import (
 	"github.com/mwm-io/gapi/response"
 )
 
-// ParseParamsBody : request body for ParseParamsHandler
-type ParseParamsBody struct {
+// ProcessBody : request body for ProcessHandler
+type ProcessBody struct {
 	Name string `json:"name"`
 }
 
-// ParseParamsResponse : result for ParseParamsHandler
-type ParseParamsResponse struct {
+// ProcessResponse : result for ProcessHandler
+type ProcessResponse struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	Age  int    `json:"age"`
 }
 
-// ParseParamsHandler /
-type ParseParamsHandler struct {
+// ProcessHandler /
+type ProcessHandler struct {
 	request.PreProcessHandler
+	request.PostProcessHandler
 
-	body           ParseParamsBody
+	body           ProcessBody
 	pathParameters struct {
 		ID string `path:"id"`
 	}
@@ -31,23 +32,26 @@ type ParseParamsHandler struct {
 	}
 }
 
-// ParseParamsHandlerF /
-func ParseParamsHandlerF() request.HandlerFactory {
+// ProcessHandlerF /
+func ProcessHandlerF() request.HandlerFactory {
 	return func() request.Handler {
-		h := &ParseParamsHandler{}
+		h := &ProcessHandler{}
 
-		h.PreProcessHandler = request.PPH(
+		h.PreProcessHandler = request.PreProcessH(
 			process.QueryParameters{Parameters: &h.queryParameters},
 			process.PathParameters{Parameters: &h.pathParameters},
 			process.JsonBody{Body: &h.body},
+		)
+		h.PostProcessHandler = request.PostProcessH(
+			process.SaveRequestID{},
 		)
 		return h
 	}
 }
 
 // Serve /
-func (h *ParseParamsHandler) Serve(_ request.WrappedRequest) (interface{}, response.Error) {
-	return ParseParamsResponse{
+func (h *ProcessHandler) Serve(_ request.WrappedRequest) (interface{}, response.Error) {
+	return ProcessResponse{
 		ID:   h.pathParameters.ID,
 		Name: h.body.Name,
 		Age:  h.queryParameters.Age,

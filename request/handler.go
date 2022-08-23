@@ -43,4 +43,16 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	handleHandlerResponse(wrappedRequest, result)
+
+	if preHandler, ok := handler.(PostProcessAware); ok {
+		var errPreProcess response.Error
+		for _, preprocess := range preHandler.PostProcesses() {
+			handler, errPreProcess = preprocess.PostProcess(handler, &wrappedRequest)
+			if errPreProcess != nil {
+				errPreProcess.WriteResponse(wrappedRequest.Response, wrappedRequest.ContentType.String())
+				return
+			}
+		}
+	}
+
 }
