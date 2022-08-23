@@ -1,12 +1,12 @@
 package request
 
 import (
-	"github.com/mwm-io/gapi/response"
+	"github.com/mwm-io/gapi/error"
 )
 
 // PreProcess is able to execute itself before a server.Handler is executed
 type PreProcess interface {
-	PreProcess(Handler, *WrappedRequest) (Handler, response.Error)
+	PreProcess(Handler, *WrappedRequest) (Handler, error.Error)
 }
 
 // PreProcessAware is able to give the list of server.PreProcess to execute before executing itself

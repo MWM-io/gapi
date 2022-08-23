@@ -1,12 +1,12 @@
 package request
 
 import (
-	"github.com/mwm-io/gapi/response"
+	"github.com/mwm-io/gapi/error"
 )
 
 // PostProcess is able to execute itself before a request.Handler is executed
 type PostProcess interface {
-	PostProcess(Handler, *WrappedRequest) (Handler, response.Error)
+	PostProcess(Handler, *WrappedRequest) (Handler, error.Error)
 }
 
 // PostProcessAware is able to give the list of request.PostProcess to execute before executing itself

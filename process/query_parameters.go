@@ -2,7 +2,7 @@ package process
 
 import (
 	"github.com/gorilla/schema"
-	"github.com/mwm-io/gapi/response"
+	"github.com/mwm-io/gapi/error"
 
 	"github.com/mwm-io/gapi/request"
 )
@@ -15,12 +15,12 @@ type QueryParameters struct {
 }
 
 // PreProcess implements the server.PreProcess interface
-func (m QueryParameters) PreProcess(handler request.Handler, r *request.WrappedRequest) (request.Handler, response.Error) {
+func (m QueryParameters) PreProcess(handler request.Handler, r *request.WrappedRequest) (request.Handler, error.Error) {
 	decoder.IgnoreUnknownKeys(true)
 	decoder.SetAliasTag("query")
 	err := decoder.Decode(m.Parameters, r.Request.URL.Query())
 	if err != nil {
-		return nil, response.ErrorInternalServerError(err)
+		return nil, error.Wrap(err, "decoder.Decode() failed")
 	}
 
 	return handler, nil

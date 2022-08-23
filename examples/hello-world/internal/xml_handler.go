@@ -1,8 +1,8 @@
 package internal
 
 import (
+	"github.com/mwm-io/gapi/error"
 	"github.com/mwm-io/gapi/request"
-	"github.com/mwm-io/gapi/response"
 )
 
 // XmlHelloWorldHandler : Xml hello returns an xml response
@@ -17,7 +17,7 @@ func XmlHelloWorldHandlerF() request.HandlerFactory {
 }
 
 // Serve /
-func (h XmlHelloWorldHandler) Serve(w request.WrappedRequest) (interface{}, response.Error) {
+func (h XmlHelloWorldHandler) Serve(w request.WrappedRequest) (interface{}, error.Error) {
 	w.ContentType = request.ApplicationXML
 
 	return struct {

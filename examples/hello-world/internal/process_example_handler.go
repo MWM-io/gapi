@@ -1,9 +1,9 @@
 package internal
 
 import (
+	"github.com/mwm-io/gapi/error"
 	"github.com/mwm-io/gapi/process"
 	"github.com/mwm-io/gapi/request"
-	"github.com/mwm-io/gapi/response"
 )
 
 // ProcessBody : request body for ProcessHandler
@@ -50,7 +50,7 @@ func ProcessHandlerF() request.HandlerFactory {
 }
 
 // Serve /
-func (h *ProcessHandler) Serve(_ request.WrappedRequest) (interface{}, response.Error) {
+func (h *ProcessHandler) Serve(_ request.WrappedRequest) (interface{}, error.Error) {
 	return ProcessResponse{
 		ID:   h.pathParameters.ID,
 		Name: h.body.Name,

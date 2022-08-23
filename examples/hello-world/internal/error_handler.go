@@ -3,8 +3,8 @@ package internal
 import (
 	"errors"
 
+	"github.com/mwm-io/gapi/error"
 	"github.com/mwm-io/gapi/request"
-	"github.com/mwm-io/gapi/response"
 )
 
 // ErrorHelloWorldHandler :
@@ -18,8 +18,8 @@ func ErrorHelloWorldHandlerF() request.HandlerFactory {
 }
 
 // Serve /
-func (h ErrorHelloWorldHandler) Serve(_ request.WrappedRequest) (interface{}, response.Error) {
-	err := response.GapiError{
+func (h ErrorHelloWorldHandler) Serve(_ request.WrappedRequest) (interface{}, error.Error) {
+	err := error.GapiError{
 		Msg:    "Hello World",
 		Code:   500,
 		Origin: errors.New("something went wrong"),

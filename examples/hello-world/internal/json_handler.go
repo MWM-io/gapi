@@ -1,8 +1,8 @@
 package internal
 
 import (
+	"github.com/mwm-io/gapi/error"
 	"github.com/mwm-io/gapi/request"
-	"github.com/mwm-io/gapi/response"
 )
 
 // JsonHelloWorldHandler :
@@ -16,6 +16,6 @@ func JsonHelloWorldHandlerF() request.HandlerFactory {
 }
 
 // Serve /
-func (h JsonHelloWorldHandler) Serve(_ request.WrappedRequest) (interface{}, response.Error) {
+func (h JsonHelloWorldHandler) Serve(_ request.WrappedRequest) (interface{}, error.Error) {
 	return struct{ Text string }{Text: "Hello World"}, nil
 }
