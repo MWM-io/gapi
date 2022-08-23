@@ -13,5 +13,7 @@ func main() {
 	request.AddHandler(r, "GET", "/xml/hello", internal.XmlHelloWorldHandlerF())
 	request.AddHandler(r, "GET", "/error/hello", internal.ErrorHelloWorldHandlerF())
 
+	request.AddHandler(r, "POST", "/parse-params/hello/{id}", internal.ParseParamsHandlerF())
+
 	router.Handle(r)
 }

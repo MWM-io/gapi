@@ -42,8 +42,6 @@ func (e GapiError) WriteResponse(r http.ResponseWriter, contentType string) {
 		r.WriteHeader(http.StatusInternalServerError)
 	}
 
-	fmt.Println(contentType)
-
 	switch contentType {
 	case "application/json":
 		err := json.NewEncoder(r).Encode(e)
@@ -66,4 +64,44 @@ func (e GapiError) WriteResponse(r http.ResponseWriter, contentType string) {
 			http.Error(r, err.Error(), http.StatusInternalServerError)
 		}
 	}
+}
+
+// ErrorInternalServerError returns a new InternalServerError Error. Use origin
+// optional parameter to initialize the origin of this error.
+func ErrorInternalServerError(origin ...error) GapiError {
+	err := GapiError{
+		Code: http.StatusInternalServerError,
+		Msg:  "Internal server error",
+	}
+	if len(origin) > 0 {
+		err.Origin = origin[0]
+	}
+	return err
+}
+
+// ErrorInternalServerErrorf returns a new InternalServerError Error with customer message.
+func ErrorInternalServerErrorf(format string, args ...interface{}) GapiError {
+	err := ErrorInternalServerError()
+	err.Msg = fmt.Sprintf(format, args...)
+	return err
+}
+
+// ErrorBadRequest returns a new BadRequest Error. Use origin
+// optional parameter to initialize the origin of this error.
+func ErrorBadRequest(origin ...error) GapiError {
+	err := GapiError{
+		Code: http.StatusBadRequest,
+		Msg:  "Bad request",
+	}
+	if len(origin) > 0 {
+		err.Origin = origin[0]
+	}
+	return err
+}
+
+// ErrorBadRequestf returns a new BadRequest Error with customer message.
+func ErrorBadRequestf(format string, args ...interface{}) GapiError {
+	err := ErrorBadRequest()
+	err.Msg = fmt.Sprintf(format, args...)
+	return err
 }

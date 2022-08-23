@@ -24,7 +24,16 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	wrappedRequest := NewWrappedRequest(w, r)
 
-	// TODO PreProcess
+	if preHandler, ok := handler.(PreProcessAware); ok {
+		var errPreProcess response.Error
+		for _, preprocess := range preHandler.PreProcesses() {
+			handler, errPreProcess = preprocess.PreProcess(handler, &wrappedRequest)
+			if errPreProcess != nil {
+				errPreProcess.WriteResponse(wrappedRequest.Response, wrappedRequest.ContentType.String())
+				return
+			}
+		}
+	}
 
 	w.Header().Set("Content-Type", wrappedRequest.ContentType.String())
 	result, errResp := handler.Serve(wrappedRequest)
