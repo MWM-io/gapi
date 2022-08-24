@@ -53,10 +53,15 @@ type Entry struct {
 func NewEntry(v interface{}) Entry {
 	entry := Entry{}
 
+	if entryErr, ok := v.(error); ok {
+		entry.Severity = ErrorSeverity
+		entry.Message = entryErr.Error()
+	}
+
 	withMessage, ok := v.(interface{ Message() string })
 	if ok {
 		entry.Message = withMessage.Message()
-	} else {
+	} else if entry.Message == "" {
 		if stringer, ok := v.(fmt.Stringer); ok {
 			entry.Message = stringer.String()
 		} else {

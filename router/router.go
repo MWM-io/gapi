@@ -12,21 +12,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// NewStrictMux returns a new *mux.Router configured with strict slashes.
-func NewStrictMux() *mux.Router {
-	return mux.NewRouter().StrictSlash(true)
+// NewMux returns a new *mux.Router.
+func NewMux() *mux.Router {
+	return mux.NewRouter()
 }
 
 // ServeAndHandleShutdown start a *http.Server with the default configuration (overridden by the given options)
 // It will add a CORS middleware to the *mux.Router
 // This function lock your program until a signal stopping your program is received. (see WithStopSignals)
-func ServeAndHandleShutdown(ctx context.Context, r *mux.Router, opts ...ServerOption) error {
-	srv := NewServer(ctx, r, opts...)
+func ServeAndHandleShutdown(r *mux.Router, opts ...ServerOption) error {
+	srv := NewServer(r, opts...)
 
 	log.Printf("Server Started on %s\n", srv.Addr)
 
 	return StartProcessAndHandleStopSignals(
-		ctx,
 		func() error {
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				return err
@@ -43,13 +42,12 @@ func ServeAndHandleShutdown(ctx context.Context, r *mux.Router, opts ...ServerOp
 // ServeAndHandleTlsShutdown start a *http.Server with the default configuration (overridden by the given options) and TLS
 // It will add a CORS middleware to the *mux.Router
 // This function lock your program until a signal stopping your program is received. (see WithStopSignals)
-func ServeAndHandleTlsShutdown(ctx context.Context, r *mux.Router, certCRT, certKey string, opts ...ServerOption) error {
-	srv := NewServer(ctx, r, opts...)
+func ServeAndHandleTlsShutdown(r *mux.Router, certCRT, certKey string, opts ...ServerOption) error {
+	srv := NewServer(r, opts...)
 
 	log.Printf("Server Started on %s\n", srv.Addr)
 
 	return StartProcessAndHandleStopSignals(
-		ctx,
 		func() error {
 			if err := srv.ListenAndServeTLS(certCRT, certKey); err != nil && err != http.ErrServerClosed {
 				return err
@@ -63,31 +61,32 @@ func ServeAndHandleTlsShutdown(ctx context.Context, r *mux.Router, certCRT, cert
 	)
 }
 
+// NewServer returns a new configured *http.Server.
+// You can override the default configuration using the available ServerOption.
+func NewServer(r *mux.Router, opts ...ServerOption) *http.Server {
+	c := NewConfig(opts...)
 
-// NewServer returns a new configured *http.Server with a default configuration.
-// You can use your own configuration using the available ServerOption.
-func NewServer(ctx context.Context, r *mux.Router, opts ...ServerOption) *http.Server {
-	c := NewConfig()
+	r = r.StrictSlash(c.StrictSlash())
 
 	return &http.Server{
-		Addr:   c.Addr(),
+		Addr: c.Addr(),
 		Handler: handlers.CORS(
 			handlers.AllowedOrigins(c.CORS().AllowedOrigins),
 			handlers.AllowedHeaders(c.CORS().AllowedHeaders),
 			handlers.AllowedMethods(c.CORS().AllowedMethods),
 		)(r),
 		BaseContext: func(listener net.Listener) context.Context {
-			return ctx
+			return c.Context()
 		},
 	}
 }
 
 // StartProcessAndHandleStopSignals starts the given server and handles the os stop signal to stop it,
 // executing the shutdown function.
-func StartProcessAndHandleStopSignals(ctx context.Context, process func() error, shutdown func(ctx context.Context) error, opts ...ServerOption) error {
-	c := NewConfig()
+func StartProcessAndHandleStopSignals(process func() error, shutdown func(ctx context.Context) error, opts ...ServerOption) error {
+	c := NewConfig(opts...)
 
-	processErrCh:= make(chan error, 1)
+	processErrCh := make(chan error, 1)
 	go func() {
 		processErrCh <- process()
 	}()
@@ -96,13 +95,13 @@ func StartProcessAndHandleStopSignals(ctx context.Context, process func() error,
 	signal.Notify(done, c.StopSignals()...)
 
 	select {
-		case err := <- processErrCh:
-			return err
-		case <- done:
-			break
+	case err := <-processErrCh:
+		return err
+	case <-done:
+		break
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, c.StopTimeout())
+	ctx, cancel := context.WithTimeout(c.Context(), c.StopTimeout())
 	defer cancel()
 
 	return shutdown(ctx)

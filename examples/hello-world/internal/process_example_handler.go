@@ -42,9 +42,7 @@ func ProcessHandlerF() request.HandlerFactory {
 			process.PathParameters{Parameters: &h.pathParameters},
 			process.JsonBody{Body: &h.body},
 		)
-		h.PostProcessHandler = request.PostProcessH(
-			process.SaveRequestID{},
-		)
+		h.PostProcessHandler = request.PostProcessH()
 		return h
 	}
 }

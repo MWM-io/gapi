@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"syscall"
@@ -9,10 +10,12 @@ import (
 
 // Config describe all configurable parameters for the http server.
 type Config struct {
-	port        string
-	cors        *CORS
-	stopTimeout *time.Duration
-	stopSignals []os.Signal
+	withoutStrictSlash bool
+	port               string
+	cors               *CORS
+	stopTimeout        *time.Duration
+	stopSignals        []os.Signal
+	context            context.Context
 }
 
 // NewConfig builds a new configuration with the given options.
@@ -95,6 +98,24 @@ func (c Config) StopSignals() []os.Signal {
 	return []os.Signal{os.Interrupt, syscall.SIGINT, syscall.SIGTERM}
 }
 
+// StrictSlash returns whether to apply the StrictSlash option to the *mux.Router.
+// When true, if the route path is "/path/", accessing "/path" will perform a redirect
+// to the former and vice versa. In other words, your application will always
+// see the path as specified in the route.
+func (c Config) StrictSlash() bool {
+	return !c.withoutStrictSlash
+}
+
+// Context returns the default context.
+// It will create a new context if none is provided.
+func (c Config) Context() context.Context {
+	if c.context != nil {
+		return c.context
+	}
+
+	return context.Background()
+}
+
 // ServerOption is an option to modify the default configuration of the http server.
 type ServerOption func(*Config)
 
@@ -127,5 +148,20 @@ func WithStopTimeout(d *time.Duration) ServerOption {
 func WithStopSignals(signals ...os.Signal) ServerOption {
 	return func(config *Config) {
 		config.stopSignals = signals
+	}
+}
+
+// WithStrictSlash specify if we use the strictSlash configuration or not.
+func WithStrictSlash(strictSlash bool) ServerOption {
+	return func(config *Config) {
+		config.withoutStrictSlash = !strictSlash
+	}
+}
+
+// WithContext specify a parent context for the *http.Server.
+// It will be passed to every request.
+func WithContext(ctx context.Context) ServerOption {
+	return func(config *Config) {
+		config.context = ctx
 	}
 }

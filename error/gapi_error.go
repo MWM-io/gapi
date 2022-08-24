@@ -12,6 +12,11 @@ type GapiError struct {
 	Origin error  `json:"-"`
 }
 
+// Error implements the error interface.
+func (e GapiError) Error() string {
+	return e.Message()
+}
+
 // Message returns the Error message. If the Msg field is not filled,
 // try to call the origin Error method instead.
 func (e GapiError) Message() string {
