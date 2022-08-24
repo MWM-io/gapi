@@ -20,8 +20,7 @@ type ProcessResponse struct {
 
 // ProcessHandler /
 type ProcessHandler struct {
-	request.PreProcessHandler
-	request.PostProcessHandler
+	request.MiddlewareHandler
 
 	body           ProcessBody
 	pathParameters struct {
@@ -37,12 +36,13 @@ func ProcessHandlerF() request.HandlerFactory {
 	return func() request.Handler {
 		h := &ProcessHandler{}
 
-		h.PreProcessHandler = request.PreProcessH(
-			process.QueryParameters{Parameters: &h.queryParameters},
+		h.MiddlewareHandler = request.MiddlewareH(
+			process.Tracing{},
 			process.PathParameters{Parameters: &h.pathParameters},
+			process.QueryParameters{Parameters: &h.queryParameters},
 			process.JsonBody{Body: &h.body},
 		)
-		h.PostProcessHandler = request.PostProcessH()
+
 		return h
 	}
 }

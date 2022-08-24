@@ -21,24 +21,28 @@ type BodyValidation interface {
 	Validate() error.Error
 }
 
-// PreProcess implements the server.PreProcess interface
-func (m JsonBody) PreProcess(handler request.Handler, r *request.WrappedRequest) (request.Handler, error.Error) {
-	var buffer bytes.Buffer
-	reader := io.TeeReader(r.Request.Body, &buffer)
+// Wrap implements the request.Middleware interface
+func (m JsonBody) Wrap(h request.Handler) request.Handler {
+	return request.HandlerFunc(func(r request.WrappedRequest) (interface{}, error.Error) {
+		var buffer bytes.Buffer
+		reader := io.TeeReader(r.Request.Body, &buffer)
 
-	defer func() {
-		_ = r.Request.Body.Close
+		defer func() {
+			_ = r.Request.Body.Close
+		}()
+
+		if err := json.NewDecoder(reader).Decode(m.Body); err != nil {
+			return nil, error.Wrap(err, "failed to parse body", error.StatusCodeOpt(http.StatusBadRequest))
+		}
 
 		r.Request.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
-	}()
 
-	if err := json.NewDecoder(reader).Decode(m.Body); err != nil {
-		return handler, error.Wrap(err, "failed to parse body", error.StatusCodeOpt(http.StatusBadRequest))
-	}
+		if v, ok := m.Body.(BodyValidation); !m.SkipValidation && ok {
+			if errValidate := v.Validate(); errValidate != nil {
+				return nil, errValidate
+			}
+		}
 
-	if v, ok := m.Body.(BodyValidation); !m.SkipValidation && ok {
-		return handler, v.Validate()
-	}
-
-	return handler, nil
+		return h.Serve(r)
+	})
 }

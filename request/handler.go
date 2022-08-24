@@ -15,6 +15,12 @@ type Handler interface {
 	Serve(WrappedRequest) (interface{}, error.Error)
 }
 
+type HandlerFunc func(WrappedRequest) (interface{}, error.Error)
+
+func (h HandlerFunc) Serve(request WrappedRequest) (interface{}, error.Error) {
+	return h(request)
+}
+
 // HandlerFactory is a function that return a new Handler
 type HandlerFactory func() Handler
 
@@ -29,14 +35,10 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	wrappedRequest := NewWrappedRequest(w, r)
 	w.Header().Set("Content-Type", wrappedRequest.ContentType.String())
 
-	if preHandler, ok := handler.(PreProcessAware); ok {
-		var errPreProcess error.Error
-		for _, preprocess := range preHandler.PreProcesses() {
-			handler, errPreProcess = preprocess.PreProcess(handler, &wrappedRequest)
-			if errPreProcess != nil {
-				handleError(wrappedRequest, errPreProcess)
-				return
-			}
+	if middlewareHandler, ok := handler.(MiddlewareAware); ok {
+		middlewares := middlewareHandler.Middlewares()
+		for i := len(middlewares) - 1; i >= 0; i-- {
+			handler = middlewares[i].Wrap(handler)
 		}
 	}
 
@@ -47,18 +49,6 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	handleHandlerResponse(wrappedRequest, result)
-
-	if preHandler, ok := handler.(PostProcessAware); ok {
-		var errPreProcess error.Error
-		for _, preprocess := range preHandler.PostProcesses() {
-			handler, errPreProcess = preprocess.PostProcess(handler, &wrappedRequest)
-			if errPreProcess != nil {
-				handleError(wrappedRequest, errPreProcess)
-				return
-			}
-		}
-	}
-
 }
 
 func handleError(wr WrappedRequest, errE error.Error) {
