@@ -56,6 +56,7 @@ func NewWriter(marshaler EntryMarshaler, writer io.Writer) *Writer {
 // WriteEntry implements the EntryWriter interface.
 func (s *Writer) WriteEntry(entry Entry) {
 	_, _ = s.writer.Write(s.marshaler.Marshal(entry))
+	_, _ = s.writer.Write([]byte("\n"))
 }
 
 // MultiWriter is an EntryWriter that write to all its children.

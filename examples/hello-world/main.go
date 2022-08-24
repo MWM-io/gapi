@@ -16,10 +16,11 @@ import (
 )
 
 func main() {
-	clientLogger := setupLog(context.Background())
+	ctx := context.Background()
+	clientLogger := setupLog(ctx)
 	defer clientLogger.Close()
 
-	r := router.Create()
+	r := router.NewStrictMux()
 
 	request.AddHandler(r, "GET", "/json/hello", internal.JsonHelloWorldHandlerF())
 	request.AddHandler(r, "GET", "/xml/hello", internal.XmlHelloWorldHandlerF())
@@ -29,7 +30,11 @@ func main() {
 
 	gLog.Info("Starting http server")
 
-	router.Handle(r)
+	if err := router.ServeAndHandleShutdown(ctx, r); err != nil {
+		gLog.LogAny(err)
+	}
+
+	gLog.Info("Server stopped")
 }
 
 func setupLog(ctx context.Context) *logging.Client {

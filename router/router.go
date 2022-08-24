@@ -2,95 +2,108 @@ package router
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
-	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
-// Create returns a mux.Router configured with strictSlash as DefaultConfig.StrictSlash by default.
-//  You can set DefaultConfig.StrictSlash = false to disable automatic redirection "/path/" -> "/path"
-func Create() *mux.Router {
-	return mux.NewRouter().StrictSlash(DefaultConfig.StrictSlash)
+// NewStrictMux returns a new *mux.Router configured with strict slashes.
+func NewStrictMux() *mux.Router {
+	return mux.NewRouter().StrictSlash(true)
 }
 
-// Handle start server
-//  - Compute CORS
-//  - Listen on port defined by in DefaultConfig.Port (env variable "PORT"), if empty the port 8080 is used
-//  - Serve incoming request
-//  This function lock your program until a SIGINT or SIGTERM is sent, you can use this behavior to detect the server shutdown
-func Handle(r *mux.Router) {
-	if DefaultConfig.Port == "" {
-		DefaultConfig.Port = "8080"
-	}
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", DefaultConfig.Port),
-		Handler: computeCors(r),
-	}
+// ServeAndHandleShutdown start a *http.Server with the default configuration (overridden by the given options)
+// It will add a CORS middleware to the *mux.Router
+// This function lock your program until a signal stopping your program is received. (see WithStopSignals)
+func ServeAndHandleShutdown(ctx context.Context, r *mux.Router, opts ...ServerOption) error {
+	srv := NewServer(ctx, r, opts...)
 
+	log.Printf("Server Started on %s\n", srv.Addr)
+
+	return StartProcessAndHandleStopSignals(
+		ctx,
+		func() error {
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				return err
+			}
+
+			return nil
+		},
+		func(ctx context.Context) error {
+			return srv.Shutdown(ctx)
+		},
+	)
+}
+
+// ServeAndHandleTlsShutdown start a *http.Server with the default configuration (overridden by the given options) and TLS
+// It will add a CORS middleware to the *mux.Router
+// This function lock your program until a signal stopping your program is received. (see WithStopSignals)
+func ServeAndHandleTlsShutdown(ctx context.Context, r *mux.Router, certCRT, certKey string, opts ...ServerOption) error {
+	srv := NewServer(ctx, r, opts...)
+
+	log.Printf("Server Started on %s\n", srv.Addr)
+
+	return StartProcessAndHandleStopSignals(
+		ctx,
+		func() error {
+			if err := srv.ListenAndServeTLS(certCRT, certKey); err != nil && err != http.ErrServerClosed {
+				return err
+			}
+
+			return nil
+		},
+		func(ctx context.Context) error {
+			return srv.Shutdown(ctx)
+		},
+	)
+}
+
+
+// NewServer returns a new configured *http.Server with a default configuration.
+// You can use your own configuration using the available ServerOption.
+func NewServer(ctx context.Context, r *mux.Router, opts ...ServerOption) *http.Server {
+	c := NewConfig()
+
+	return &http.Server{
+		Addr:   c.Addr(),
+		Handler: handlers.CORS(
+			handlers.AllowedOrigins(c.CORS().AllowedOrigins),
+			handlers.AllowedHeaders(c.CORS().AllowedHeaders),
+			handlers.AllowedMethods(c.CORS().AllowedMethods),
+		)(r),
+		BaseContext: func(listener net.Listener) context.Context {
+			return ctx
+		},
+	}
+}
+
+// StartProcessAndHandleStopSignals starts the given server and handles the os stop signal to stop it,
+// executing the shutdown function.
+func StartProcessAndHandleStopSignals(ctx context.Context, process func() error, shutdown func(ctx context.Context) error, opts ...ServerOption) error {
+	c := NewConfig()
+
+	processErrCh:= make(chan error, 1)
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
-		}
+		processErrCh <- process()
 	}()
 
-	// TODO : mLogger.Infof(nil, "", fmt.Sprintf("Server Started on %s", srv.Addr))
-
-	handleSignalsToStopServer(srv)
-}
-
-// HandleTLS start server
-//  - Compute CORS
-//  - Listen on port defined by in DefaultConfig.Port (env variable "PORT"), if empty the port 443 is used
-//  - Serve incoming TLS request
-//  This function lock your program until a SIGINT or SIGTERM is sent, you can use this behavior to detect the server shutdown
-func HandleTLS(r *mux.Router, certCRT, certKey string) {
-	if DefaultConfig.Port == "" {
-		DefaultConfig.Port = "443"
-	}
-
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", DefaultConfig.Port),
-		Handler: computeCors(r),
-	}
-
-	go func() {
-		if err := srv.ListenAndServeTLS(certCRT, certKey); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
-		}
-	}()
-
-	// TODO : mLogger.Infof(nil, "", fmt.Sprintf("Server Started on %s", srv.Addr))
-
-	handleSignalsToStopServer(srv)
-}
-
-func handleSignalsToStopServer(srv *http.Server) {
 	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(done, c.StopSignals()...)
 
-	<-done
+	select {
+		case err := <- processErrCh:
+			return err
+		case <- done:
+			break
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, c.StopTimeout())
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		// TODO : mLogger.Errorf(nil, "", "Server Shutdown Failed:%+v", err)
-	}
-
-	// TODO : mLogger.Infof(nil, "", "Server stopped")
-}
-
-func computeCors(r *mux.Router) http.Handler {
-	return handlers.CORS(
-		handlers.AllowedOrigins(DefaultConfig.AllowedOrigins),
-		handlers.AllowedHeaders(DefaultConfig.AllowedHeaders),
-		handlers.AllowedMethods(DefaultConfig.AllowedMethods),
-	)(r)
+	return shutdown(ctx)
 }
