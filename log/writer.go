@@ -30,7 +30,7 @@ var JSONEntryMarshaler = EntryMarshalerFunc(func(entry Entry) []byte {
 		Entry
 		StackTrace []StackInfo
 	}{
-		Entry: entry,
+		Entry:      entry,
 		StackTrace: entry.GetStackInfo(),
 	}
 
@@ -92,7 +92,7 @@ func NewFilterWriter(severity Severity, writer EntryWriter) *FilterWriter {
 
 // WriteEntry implements the EntryWriter interface
 func (s *FilterWriter) WriteEntry(entry Entry) {
-	if entry.Severity < s.severity {
+	if entry.Severity > s.severity {
 		return
 	}
 

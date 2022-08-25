@@ -64,7 +64,7 @@ func ServeAndHandleTlsShutdown(r *mux.Router, certCRT, certKey string, opts ...S
 // NewServer returns a new configured *http.Server.
 // You can override the default configuration using the available ServerOption.
 func NewServer(r *mux.Router, opts ...ServerOption) *http.Server {
-	c := NewConfig(opts...)
+	c := newConfig(opts...)
 
 	r = r.StrictSlash(c.StrictSlash())
 
@@ -84,7 +84,7 @@ func NewServer(r *mux.Router, opts ...ServerOption) *http.Server {
 // StartProcessAndHandleStopSignals starts the given server and handles the os stop signal to stop it,
 // executing the shutdown function.
 func StartProcessAndHandleStopSignals(process func() error, shutdown func(ctx context.Context) error, opts ...ServerOption) error {
-	c := NewConfig(opts...)
+	c := newConfig(opts...)
 
 	processErrCh := make(chan error, 1)
 	go func() {
