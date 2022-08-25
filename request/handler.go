@@ -1,39 +1,45 @@
 package request
 
 import (
-	"encoding/json"
-	"encoding/xml"
-	"fmt"
 	"net/http"
-	"os"
 
-	"github.com/mwm-io/gapi/error"
+	"github.com/gorilla/mux"
 )
+
+// AddHandler add a new handler factory to mux router for given method and path
+func AddHandler(router *mux.Router, method, path string, f HandlerFactory) {
+	router.Methods(method).
+		Path(path).
+		Handler(f)
+}
 
 // Handler is able to respond to a http request
 type Handler interface {
-	Serve(WrappedRequest) (interface{}, error.Error)
+	Serve(http.ResponseWriter, *http.Request) (interface{}, error)
 }
 
-type HandlerFunc func(WrappedRequest) (interface{}, error.Error)
+// HandlerFunc type is an adapter to allow the use of
+// ordinary functions as HTTP handlers. If f is a function
+// with the appropriate signature, HandlerFunc(f) is a
+// Handler that calls f.
+type HandlerFunc func(http.ResponseWriter, *http.Request) (interface{}, error)
 
-func (h HandlerFunc) Serve(request WrappedRequest) (interface{}, error.Error) {
-	return h(request)
+// Serve implements the Handler interface.
+func (h HandlerFunc) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return h(w, r)
 }
 
 // HandlerFactory is a function that return a new Handler
+// It is useful if you want to create a Handler that will carry request-scoped data.
 type HandlerFactory func() Handler
 
-type httpHandler struct {
-	factory HandlerFactory
+// Serve implements the Handler interface
+func (h HandlerFactory) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return h().Serve(w, r)
 }
 
-// ServeHTTP implements the http.Handler interface
-func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler := h.factory()
-
-	wrappedRequest := NewWrappedRequest(w, r)
-	w.Header().Set("Content-Type", wrappedRequest.ContentType.String())
+func (h HandlerFactory) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	handler := h()
 
 	if middlewareHandler, ok := handler.(MiddlewareAware); ok {
 		middlewares := middlewareHandler.Middlewares()
@@ -42,40 +48,16 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, errResp := handler.Serve(wrappedRequest)
-	if errResp != nil {
-		handleError(wrappedRequest, errResp)
-		return
-	}
-
-	handleHandlerResponse(wrappedRequest, result)
+	_, _ = handler.Serve(w, r)
 }
 
-func handleError(wr WrappedRequest, errE error.Error) {
-	if errE.StatusCode() != 0 {
-		wr.Response.WriteHeader(errE.StatusCode())
-	} else {
-		wr.Response.WriteHeader(http.StatusInternalServerError)
+// Middlewares implements the MiddlewareAware interface.
+func (h HandlerFactory) Middlewares() []Middleware {
+	handler := h()
+
+	if middlewareHandler, ok := handler.(MiddlewareAware); ok {
+		return middlewareHandler.Middlewares()
 	}
 
-	switch wr.ContentType {
-	case "application/json":
-		err := json.NewEncoder(wr.Response).Encode(errE)
-		if err != nil {
-			http.Error(wr.Response, err.Error(), http.StatusInternalServerError)
-		}
-
-	case "application/xml":
-		b, err := xml.MarshalIndent(errE, "", "	")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warn: MarshalIndent failed %s", err.Error())
-			http.Error(wr.Response, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		_, err = wr.Response.Write(b)
-		if err != nil {
-			http.Error(wr.Response, err.Error(), http.StatusInternalServerError)
-		}
-	}
+	return nil
 }

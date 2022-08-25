@@ -1,28 +1,34 @@
 package internal
 
 import (
-	"errors"
+	"fmt"
+	"net/http"
 
-	"github.com/mwm-io/gapi/error"
+	"github.com/mwm-io/gapi/errors"
+	"github.com/mwm-io/gapi/process"
 	"github.com/mwm-io/gapi/request"
 )
 
 // ErrorHelloWorldHandler :
-type ErrorHelloWorldHandler struct{}
+type ErrorHelloWorldHandler struct {
+	request.MiddlewareHandler
+}
 
 // ErrorHelloWorldHandlerF /
 func ErrorHelloWorldHandlerF() request.HandlerFactory {
 	return func() request.Handler {
-		return ErrorHelloWorldHandler{}
+		return ErrorHelloWorldHandler{
+			MiddlewareHandler: process.Core(),
+		}
 	}
 }
 
 // Serve /
-func (h ErrorHelloWorldHandler) Serve(_ request.WrappedRequest) (interface{}, error.Error) {
-	err := error.GapiError{
+func (h ErrorHelloWorldHandler) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	err := errors.GapiError{
 		Msg:    "Hello World",
 		Code:   500,
-		Origin: errors.New("something went wrong"),
+		Origin: fmt.Errorf("something went wrong"),
 	}
 
 	return nil, err

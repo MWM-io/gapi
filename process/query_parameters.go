@@ -1,9 +1,11 @@
 package process
 
 import (
+	"net/http"
+
 	"github.com/gorilla/schema"
 
-	"github.com/mwm-io/gapi/error"
+	"github.com/mwm-io/gapi/errors"
 
 	"github.com/mwm-io/gapi/request"
 )
@@ -17,14 +19,18 @@ type QueryParameters struct {
 
 // Wrap implements the request.Middleware interface
 func (m QueryParameters) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(r request.WrappedRequest) (interface{}, error.Error) {
-		decoder.IgnoreUnknownKeys(true)
-		decoder.SetAliasTag("query")
-		err := decoder.Decode(m.Parameters, r.Request.URL.Query())
-		if err != nil {
-			return nil, error.Wrap(err, "decoder.Decode() failed")
+	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		if m.Parameters == nil {
+			return h.Serve(w, r)
 		}
 
-		return h.Serve(r)
+		decoder.IgnoreUnknownKeys(true)
+		decoder.SetAliasTag("query")
+		err := decoder.Decode(m.Parameters, r.URL.Query())
+		if err != nil {
+			return nil, errors.Wrap(err, "decoder.Decode() failed")
+		}
+
+		return h.Serve(w, r)
 	})
 }

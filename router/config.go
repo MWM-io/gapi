@@ -65,7 +65,7 @@ func (c config) AddrHttps() string {
 
 // CORS return the server's CORS settings when using this configuration.
 // By default, authorize "*" with methods "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
-// and headers "Content-Type", "Authorization"
+// and headers "content-Type", "Authorization"
 func (c config) CORS() CORS {
 	if c.cors != nil {
 		return *c.cors
@@ -74,7 +74,7 @@ func (c config) CORS() CORS {
 	return CORS{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowedHeaders: []string{"content-Type", "Authorization"},
 	}
 }
 

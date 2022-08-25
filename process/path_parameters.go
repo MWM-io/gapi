@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/mwm-io/gapi/error"
+	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/request"
 )
 
@@ -18,15 +18,19 @@ type PathParameters struct {
 
 // Wrap implements the request.Middleware interface
 func (m PathParameters) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(r request.WrappedRequest) (interface{}, error.Error) {
+	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		if m.Parameters == nil {
+			return h.Serve(w, r)
+		}
+
 		v := reflect.Indirect(reflect.ValueOf(m.Parameters))
 		typeOfParameters := v.Type()
 
 		for i := 0; i < v.NumField(); i++ {
 			pathParam := typeOfParameters.Field(i).Tag.Get("path")
-			val, ok := mux.Vars(r.Request)[pathParam]
+			val, ok := mux.Vars(r)[pathParam]
 			if !ok {
-				return nil, error.Errorf(http.StatusInternalServerError, "unknown path params")
+				return nil, errors.Errorf(http.StatusInternalServerError, "unknown path params")
 			}
 
 			field := v.FieldByName(typeOfParameters.Field(i).Name)
@@ -34,14 +38,14 @@ func (m PathParameters) Wrap(h request.Handler) request.Handler {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				x, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					return nil, error.Errorf(http.StatusBadRequest, "%s must be a number", typeOfParameters.Field(i).Name)
+					return nil, errors.Errorf(http.StatusBadRequest, "%s must be a number", typeOfParameters.Field(i).Name)
 				}
 				field.SetInt(x)
 
 			case reflect.Float64, reflect.Float32:
 				x, err := strconv.ParseFloat(val, 64)
 				if err != nil {
-					return nil, error.Errorf(http.StatusBadRequest, "%s must be a float", typeOfParameters.Field(i).Name)
+					return nil, errors.Errorf(http.StatusBadRequest, "%s must be a float", typeOfParameters.Field(i).Name)
 				}
 				field.SetFloat(x)
 
@@ -52,16 +56,16 @@ func (m PathParameters) Wrap(h request.Handler) request.Handler {
 				if reflect.TypeOf(i) == reflect.TypeOf([]byte(nil)) {
 					field.SetBytes([]byte(val))
 				} else {
-					return nil, error.Errorf(http.StatusBadRequest, "cannot have a slice in parameters")
+					return nil, errors.Errorf(http.StatusBadRequest, "cannot have a slice in parameters")
 				}
 
 			case reflect.String:
 				field.SetString(val)
 			default:
-				return nil, error.Errorf(http.StatusBadRequest, "cannot have a parameter with %q type", field.Kind().String())
+				return nil, errors.Errorf(http.StatusBadRequest, "cannot have a parameter with %q type", field.Kind().String())
 			}
 		}
 
-		return h.Serve(r)
+		return h.Serve(w, r)
 	})
 }

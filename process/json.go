@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/mwm-io/gapi/error"
+	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/request"
 )
 
@@ -18,24 +18,28 @@ type JsonBody struct {
 
 // BodyValidation interface can be implemented to trigger an auto validation by JsonBody PreProcess
 type BodyValidation interface {
-	Validate() error.Error
+	Validate() error
 }
 
 // Wrap implements the request.Middleware interface
 func (m JsonBody) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(r request.WrappedRequest) (interface{}, error.Error) {
+	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		if m.Body == nil {
+			return h.Serve(w, r)
+		}
+
 		var buffer bytes.Buffer
-		reader := io.TeeReader(r.Request.Body, &buffer)
+		reader := io.TeeReader(r.Body, &buffer)
 
 		defer func() {
-			_ = r.Request.Body.Close
+			_ = r.Body.Close
 		}()
 
 		if err := json.NewDecoder(reader).Decode(m.Body); err != nil {
-			return nil, error.Wrap(err, "failed to parse body", error.StatusCodeOpt(http.StatusBadRequest))
+			return nil, errors.Wrap(err, "failed to parse body", errors.StatusCodeOpt(http.StatusBadRequest))
 		}
 
-		r.Request.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
+		r.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
 
 		if v, ok := m.Body.(BodyValidation); !m.SkipValidation && ok {
 			if errValidate := v.Validate(); errValidate != nil {
@@ -43,6 +47,6 @@ func (m JsonBody) Wrap(h request.Handler) request.Handler {
 			}
 		}
 
-		return h.Serve(r)
+		return h.Serve(w, r)
 	})
 }

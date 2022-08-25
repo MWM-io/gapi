@@ -1,7 +1,8 @@
 package internal
 
 import (
-	"github.com/mwm-io/gapi/error"
+	"net/http"
+
 	"github.com/mwm-io/gapi/process"
 	"github.com/mwm-io/gapi/request"
 )
@@ -36,11 +37,10 @@ func ProcessHandlerF() request.HandlerFactory {
 	return func() request.Handler {
 		h := &ProcessHandler{}
 
-		h.MiddlewareHandler = request.MiddlewareH(
-			process.Tracing{},
-			process.PathParameters{Parameters: &h.pathParameters},
-			process.QueryParameters{Parameters: &h.queryParameters},
-			process.JsonBody{Body: &h.body},
+		h.MiddlewareHandler = process.Core(
+			process.WithPathParameters(&h.pathParameters),
+			process.WithQueryParameters(&h.queryParameters),
+			process.WithBody(&h.body),
 		)
 
 		return h
@@ -48,7 +48,7 @@ func ProcessHandlerF() request.HandlerFactory {
 }
 
 // Serve /
-func (h *ProcessHandler) Serve(_ request.WrappedRequest) (interface{}, error.Error) {
+func (h *ProcessHandler) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return ProcessResponse{
 		ID:   h.pathParameters.ID,
 		Name: h.body.Name,
