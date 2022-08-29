@@ -1,11 +1,11 @@
-package process
+package middleware
 
 import (
 	"net/http"
 
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/trace/propagation"
-	
+
 	"github.com/mwm-io/gapi/request"
 )
 

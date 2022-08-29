@@ -1,4 +1,4 @@
-package process
+package middleware
 
 import (
 	"encoding/json"
@@ -18,7 +18,6 @@ func Core(opts ...CoreOption) request.MiddlewareHandler {
 			IsPublicEndpoint: false,
 		},
 		LogResponseWriter: Log{Logger: gLog.GlobalLogger()},
-		Log:               Log{Logger: gLog.GlobalLogger()},
 		ResponseWriter: request.ResponseWriterMiddleware{
 			Marshalers: map[string]request.Marshaler{
 				"application/json": request.MarshalerFunc(json.Marshal),
@@ -26,6 +25,7 @@ func Core(opts ...CoreOption) request.MiddlewareHandler {
 			},
 			DefaultContentType: "application/json",
 		},
+		Log:             Log{Logger: gLog.GlobalLogger()},
 		PathParameters:  PathParameters{},
 		QueryParameters: QueryParameters{},
 		JsonBody:        JsonBody{},
@@ -40,6 +40,7 @@ func Core(opts ...CoreOption) request.MiddlewareHandler {
 		core.LogResponseWriter,
 		core.ResponseWriter,
 		core.Log,
+		core.Recover,
 		core.PathParameters,
 		core.QueryParameters,
 		core.JsonBody,
@@ -49,8 +50,9 @@ func Core(opts ...CoreOption) request.MiddlewareHandler {
 type CoreConfig struct {
 	Tracing           Tracing
 	LogResponseWriter Log
-	Log               Log
 	ResponseWriter    request.ResponseWriterMiddleware
+	Log               Log
+	Recover           Recover
 	PathParameters    PathParameters
 	QueryParameters   QueryParameters
 	JsonBody          JsonBody

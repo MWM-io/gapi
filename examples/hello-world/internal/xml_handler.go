@@ -3,7 +3,7 @@ package internal
 import (
 	"net/http"
 
-	"github.com/mwm-io/gapi/process"
+	"github.com/mwm-io/gapi/middleware"
 	"github.com/mwm-io/gapi/request"
 )
 
@@ -16,8 +16,8 @@ type XmlHelloWorldHandler struct {
 func XmlHelloWorldHandlerF() request.HandlerFactory {
 	return func() request.Handler {
 		return XmlHelloWorldHandler{
-			MiddlewareHandler: process.Core(
-				process.WithDefaultContentType("application/xml"),
+			MiddlewareHandler: middleware.Core(
+				middleware.WithDefaultContentType("application/xml"),
 			),
 		}
 	}

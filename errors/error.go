@@ -5,21 +5,21 @@ import (
 	"net/http"
 )
 
-// GapiError /
-type GapiError struct {
+// Error /
+type Error struct {
 	Msg    string `json:"message"`
 	Code   int    `json:"code"`
 	Origin error  `json:"-"`
 }
 
 // Error implements the error interface.
-func (e GapiError) Error() string {
+func (e Error) Error() string {
 	return e.Message()
 }
 
 // Message returns the Error message. If the Msg field is not filled,
 // try to call the origin Error method instead.
-func (e GapiError) Message() string {
+func (e Error) Message() string {
 	if e.Msg == "" && e.Origin != nil {
 		return e.Origin.Error()
 	}
@@ -27,28 +27,28 @@ func (e GapiError) Message() string {
 }
 
 // StatusCode /
-func (e GapiError) StatusCode() int {
+func (e Error) StatusCode() int {
 	return e.Code
 }
 
 // Unwrap /
-func (e GapiError) Unwrap() error {
+func (e Error) Unwrap() error {
 	return e.Origin
 }
 
-type errOpt func(gapiError *GapiError)
+type errOpt func(gapiError *Error)
 
 // StatusCodeOpt override error status code /
 func StatusCodeOpt(statusCode int) errOpt {
-	return func(gapiError *GapiError) {
+	return func(gapiError *Error) {
 		gapiError.Code = statusCode
 	}
 }
 
 // Wrap returns a new BadRequest Error. Use origin
 // optional parameter to initialize the origin of this error.
-func Wrap(origin error, message string, opts ...errOpt) GapiError {
-	ge := GapiError{
+func Wrap(origin error, message string, opts ...errOpt) Error {
+	ge := Error{
 		Code:   http.StatusInternalServerError,
 		Msg:    message,
 		Origin: origin,
@@ -62,8 +62,8 @@ func Wrap(origin error, message string, opts ...errOpt) GapiError {
 }
 
 // Errorf returns a new BadRequest Error with customer message.
-func Errorf(statusCode int, format string, args ...interface{}) GapiError {
-	return GapiError{
+func Errorf(statusCode int, format string, args ...interface{}) Error {
+	return Error{
 		Code: statusCode,
 		Msg:  fmt.Sprintf(format, args...),
 	}
