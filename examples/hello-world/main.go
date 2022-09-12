@@ -9,8 +9,7 @@ import (
 
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/log/cloud_logging"
-	"github.com/mwm-io/gapi/request"
-	"github.com/mwm-io/gapi/router"
+	"github.com/mwm-io/gapi/server"
 
 	"github.com/mwm-io/gapi/examples/hello-world/internal"
 )
@@ -20,17 +19,17 @@ func main() {
 	clientLogger := setupLog(ctx)
 	defer clientLogger.Close()
 
-	r := router.NewMux()
+	r := server.NewMux()
 
-	request.AddHandler(r, "GET", "/json/hello", internal.JsonHelloWorldHandlerF())
-	request.AddHandler(r, "GET", "/xml/hello", internal.XmlHelloWorldHandlerF())
-	request.AddHandler(r, "GET", "/error/hello", internal.ErrorHelloWorldHandlerF())
+	server.AddHandler(r, "GET", "/json/hello", internal.JsonHelloWorldHandlerF())
+	server.AddHandler(r, "GET", "/xml/hello", internal.XmlHelloWorldHandlerF())
+	server.AddHandler(r, "GET", "/error/hello", internal.ErrorHelloWorldHandlerF())
 
-	request.AddHandler(r, "POST", "/process/hello/{id}", internal.ProcessHandlerF())
+	server.AddHandler(r, "POST", "/process/hello/{id}", internal.ProcessHandlerF())
 
 	gLog.Info("Starting http server")
 
-	if err := router.ServeAndHandleShutdown(r, router.WithContext(ctx)); err != nil {
+	if err := server.ServeAndHandleShutdown(r, server.WithContext(ctx)); err != nil {
 		gLog.LogAny(err)
 	}
 

@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/mwm-io/gapi/errors"
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/server"
 )
 
 // JsonBody is a pre-processor that will json.Unmarshal the request body into the Body field.
@@ -22,8 +22,8 @@ type BodyValidation interface {
 }
 
 // Wrap implements the request.Middleware interface
-func (m JsonBody) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m JsonBody) Wrap(h server.Handler) server.Handler {
+	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		if m.Body == nil {
 			return h.Serve(w, r)
 		}

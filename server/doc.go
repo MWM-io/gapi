@@ -1,5 +1,5 @@
 /*
-Package router provides a simple router based https://github.com/gorilla/mux
+Package server provides a simple router based https://github.com/gorilla/mux
 
 	r := router.NewMux()
 
@@ -11,4 +11,4 @@ Package router provides a simple router based https://github.com/gorilla/mux
 	}
 
 */
-package router
+package server

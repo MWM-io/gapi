@@ -6,7 +6,7 @@ import (
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/trace/propagation"
 
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/server"
 )
 
 // Tracing will add tracing information
@@ -16,8 +16,8 @@ type Tracing struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m Tracing) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m Tracing) Wrap(h server.Handler) server.Handler {
+	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		var resp interface{}
 		var err error
 

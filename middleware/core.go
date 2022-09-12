@@ -7,21 +7,21 @@ import (
 	"contrib.go.opencensus.io/exporter/stackdriver/propagation"
 
 	gLog "github.com/mwm-io/gapi/log"
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/server"
 )
 
 // Core allows you to easily add middlewares to your handler.
-func Core(opts ...CoreOption) request.MiddlewareHandler {
+func Core(opts ...CoreOption) server.MiddlewareHandler {
 	core := CoreConfig{
 		Tracing: Tracing{
 			Propagation:      &propagation.HTTPFormat{},
 			IsPublicEndpoint: false,
 		},
 		LogResponseWriter: Log{Logger: gLog.GlobalLogger()},
-		ResponseWriter: request.ResponseWriterMiddleware{
-			Marshalers: map[string]request.Marshaler{
-				"application/json": request.MarshalerFunc(json.Marshal),
-				"application/xml":  request.MarshalerFunc(xml.Marshal),
+		ResponseWriter: ResponseWriterMiddleware{
+			Marshalers: map[string]Marshaler{
+				"application/json": MarshalerFunc(json.Marshal),
+				"application/xml":  MarshalerFunc(xml.Marshal),
 			},
 			DefaultContentType: "application/json",
 		},
@@ -35,7 +35,7 @@ func Core(opts ...CoreOption) request.MiddlewareHandler {
 		opt(&core)
 	}
 
-	return request.MiddlewareH(
+	return server.MiddlewareH(
 		core.Tracing,
 		core.LogResponseWriter,
 		core.ResponseWriter,
@@ -50,7 +50,7 @@ func Core(opts ...CoreOption) request.MiddlewareHandler {
 type CoreConfig struct {
 	Tracing           Tracing
 	LogResponseWriter Log
-	ResponseWriter    request.ResponseWriterMiddleware
+	ResponseWriter    ResponseWriterMiddleware
 	Log               Log
 	Recover           Recover
 	PathParameters    PathParameters
@@ -78,7 +78,7 @@ func WithLogResponseWriter(log Log) CoreOption {
 	}
 }
 
-func WithResponseMarshaler(contentType string, marshaler request.Marshaler) CoreOption {
+func WithResponseMarshaler(contentType string, marshaler Marshaler) CoreOption {
 	return func(config *CoreConfig) {
 		config.ResponseWriter.Marshalers[contentType] = marshaler
 	}

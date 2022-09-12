@@ -1,11 +1,13 @@
-package request
+package middleware
 
 import (
+	"bytes"
 	"io"
 	"mime"
 	"net/http"
 
 	"github.com/mwm-io/gapi/errors"
+	"github.com/mwm-io/gapi/server"
 )
 
 // WithStatusCode is able to return its http status code.
@@ -31,8 +33,8 @@ type ResponseWriterMiddleware struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m ResponseWriterMiddleware) Wrap(h Handler) Handler {
-	return HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m ResponseWriterMiddleware) Wrap(h server.Handler) server.Handler {
+	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		wrappedW := &ResponseWriter{ResponseWriter: w}
 
 		resp, err := h.Serve(wrappedW, r)
@@ -135,4 +137,48 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 	}
 
 	return wantedType, marshaler, nil
+}
+
+// ResponseWriter This ResponseWriter is used to store the statusCode
+// and the content written to the http.ResponseWriter.
+type ResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	content    *bytes.Buffer
+}
+
+// NewResponseWriter Create a new ResponseWriter
+func NewResponseWriter(w http.ResponseWriter) ResponseWriter {
+	return ResponseWriter{
+		ResponseWriter: w,
+		statusCode:     0,
+		content:        new(bytes.Buffer),
+	}
+}
+
+// StatusCode return the statusCode of the response.
+// It's 0 if it isn't set.
+func (rw *ResponseWriter) StatusCode() int {
+	return rw.statusCode
+}
+
+// Content returns the content already written to the response.
+func (rw *ResponseWriter) Content() io.Reader {
+	return rw.content
+}
+
+// WriteHeader Write the code in local and to the http response
+func (rw *ResponseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+// Write writes the data to the connection as part of an HTTP reply.
+func (rw *ResponseWriter) Write(b []byte) (int, error) {
+	if rw.statusCode == 0 {
+		rw.statusCode = http.StatusOK
+	}
+
+	rw.content.Write(b)
+	return rw.ResponseWriter.Write(b)
 }

@@ -6,17 +6,17 @@ import (
 
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/middleware"
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/server"
 )
 
 // ErrorHelloWorldHandler :
 type ErrorHelloWorldHandler struct {
-	request.MiddlewareHandler
+	server.MiddlewareHandler
 }
 
 // ErrorHelloWorldHandlerF /
-func ErrorHelloWorldHandlerF() request.HandlerFactory {
-	return func() request.Handler {
+func ErrorHelloWorldHandlerF() server.HandlerFactory {
+	return func() server.Handler {
 		return ErrorHelloWorldHandler{
 			MiddlewareHandler: middleware.Core(),
 		}
