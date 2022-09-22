@@ -1,4 +1,4 @@
-package process
+package middleware
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/mwm-io/gapi/errors"
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/server"
 )
 
 // PathParameters is a pre-processor that will set the request parameters into the Parameters field.
@@ -17,8 +17,8 @@ type PathParameters struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m PathParameters) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m PathParameters) Wrap(h server.Handler) server.Handler {
+	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		if m.Parameters == nil {
 			return h.Serve(w, r)
 		}

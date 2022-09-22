@@ -3,8 +3,8 @@ package internal
 import (
 	"net/http"
 
-	"github.com/mwm-io/gapi/process"
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/middleware"
+	"github.com/mwm-io/gapi/server"
 )
 
 // ProcessBody : request body for ProcessHandler
@@ -21,7 +21,7 @@ type ProcessResponse struct {
 
 // ProcessHandler /
 type ProcessHandler struct {
-	request.MiddlewareHandler
+	server.MiddlewareHandler
 
 	body           ProcessBody
 	pathParameters struct {
@@ -33,14 +33,14 @@ type ProcessHandler struct {
 }
 
 // ProcessHandlerF /
-func ProcessHandlerF() request.HandlerFactory {
-	return func() request.Handler {
+func ProcessHandlerF() server.HandlerFactory {
+	return func() server.Handler {
 		h := &ProcessHandler{}
 
-		h.MiddlewareHandler = process.Core(
-			process.WithPathParameters(&h.pathParameters),
-			process.WithQueryParameters(&h.queryParameters),
-			process.WithBody(&h.body),
+		h.MiddlewareHandler = middleware.Core(
+			middleware.WithPathParameters(&h.pathParameters),
+			middleware.WithQueryParameters(&h.queryParameters),
+			middleware.WithBody(&h.body),
 		)
 
 		return h

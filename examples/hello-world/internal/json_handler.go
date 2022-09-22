@@ -3,20 +3,20 @@ package internal
 import (
 	"net/http"
 
-	"github.com/mwm-io/gapi/process"
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/middleware"
+	"github.com/mwm-io/gapi/server"
 )
 
 // JsonHelloWorldHandler :
 type JsonHelloWorldHandler struct {
-	request.MiddlewareHandler
+	server.MiddlewareHandler
 }
 
 // JsonHelloWorldHandlerF /
-func JsonHelloWorldHandlerF() request.HandlerFactory {
-	return func() request.Handler {
+func JsonHelloWorldHandlerF() server.HandlerFactory {
+	return func() server.Handler {
 		return JsonHelloWorldHandler{
-			MiddlewareHandler: process.Core(),
+			MiddlewareHandler: middleware.Core(),
 		}
 	}
 }

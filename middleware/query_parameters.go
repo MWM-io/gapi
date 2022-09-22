@@ -1,4 +1,4 @@
-package process
+package middleware
 
 import (
 	"net/http"
@@ -6,8 +6,7 @@ import (
 	"github.com/gorilla/schema"
 
 	"github.com/mwm-io/gapi/errors"
-
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/server"
 )
 
 var decoder = schema.NewDecoder()
@@ -18,8 +17,8 @@ type QueryParameters struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m QueryParameters) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m QueryParameters) Wrap(h server.Handler) server.Handler {
+	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		if m.Parameters == nil {
 			return h.Serve(w, r)
 		}

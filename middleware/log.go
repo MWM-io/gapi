@@ -1,10 +1,10 @@
-package process
+package middleware
 
 import (
 	"context"
 	"net/http"
 
-	"github.com/mwm-io/gapi/request"
+	"github.com/mwm-io/gapi/server"
 )
 
 // Logger is a logger able to log anything with a context.
@@ -18,8 +18,8 @@ type Log struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m Log) Wrap(h request.Handler) request.Handler {
-	return request.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m Log) Wrap(h server.Handler) server.Handler {
+	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		resp, err := h.Serve(w, r)
 
 		if err != nil {

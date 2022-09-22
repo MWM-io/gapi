@@ -1,4 +1,4 @@
-package request
+package server
 
 type Middleware interface {
 	Wrap(Handler) Handler

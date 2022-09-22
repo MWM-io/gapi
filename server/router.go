@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"context"
@@ -15,6 +15,13 @@ import (
 // NewMux returns a new *mux.Router.
 func NewMux() *mux.Router {
 	return mux.NewRouter()
+}
+
+// AddHandler add a new handler factory to mux router for given method and path
+func AddHandler(router *mux.Router, method, path string, f Handler) {
+	router.Methods(method).
+		Path(path).
+		Handler(HttpHandler{f})
 }
 
 // ServeAndHandleShutdown start a *http.Server with the default configuration (overridden by the given options)
