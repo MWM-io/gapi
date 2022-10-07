@@ -9,6 +9,7 @@ import (
 
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/server"
+	"github.com/mwm-io/gapi/server/openapi"
 )
 
 // PathParameters is a pre-processor that will set the request parameters into the Parameters field.
@@ -68,4 +69,9 @@ func (m PathParameters) Wrap(h server.Handler) server.Handler {
 
 		return h.Serve(w, r)
 	})
+}
+
+// Doc implements the openapi.OperationDescriptor interface
+func (m PathParameters) Doc(builder *openapi.OperationBuilder) error {
+	return builder.WithParams(m.Parameters).Error()
 }
