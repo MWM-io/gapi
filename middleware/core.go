@@ -28,7 +28,13 @@ func Core(opts ...CoreOption) server.MiddlewareHandler {
 		Log:             Log{Logger: gLog.GlobalLogger()},
 		PathParameters:  PathParameters{},
 		QueryParameters: QueryParameters{},
-		JsonBody:        JsonBody{},
+		BodyUnmarshaler: BodyUnmarshaler{
+			Unmarshalers: map[string]Unmarshaler{
+				"application/json": UnmarshalerFunc(json.Unmarshal),
+				"application/xml":  UnmarshalerFunc(xml.Unmarshal),
+			},
+			DefaultContentType: "application/json",
+		},
 	}
 
 	for _, opt := range opts {
@@ -43,7 +49,7 @@ func Core(opts ...CoreOption) server.MiddlewareHandler {
 		core.Recover,
 		core.PathParameters,
 		core.QueryParameters,
-		core.JsonBody,
+		core.BodyUnmarshaler,
 	)
 }
 
@@ -55,7 +61,7 @@ type CoreConfig struct {
 	Recover           Recover
 	PathParameters    PathParameters
 	QueryParameters   QueryParameters
-	JsonBody          JsonBody
+	BodyUnmarshaler   BodyUnmarshaler
 }
 
 type CoreOption func(*CoreConfig)
@@ -78,15 +84,28 @@ func WithLogResponseWriter(log Log) CoreOption {
 	}
 }
 
+func WithResponseType(response interface{}) CoreOption {
+	return func(config *CoreConfig) {
+		config.ResponseWriter.Response = response
+	}
+}
+
 func WithResponseMarshaler(contentType string, marshaler Marshaler) CoreOption {
 	return func(config *CoreConfig) {
 		config.ResponseWriter.Marshalers[contentType] = marshaler
 	}
 }
 
+func WithBodyUnmarshaler(contentType string, unmarshaler Unmarshaler) CoreOption {
+	return func(config *CoreConfig) {
+		config.BodyUnmarshaler.Unmarshalers[contentType] = unmarshaler
+	}
+}
+
 func WithDefaultContentType(contentType string) CoreOption {
 	return func(config *CoreConfig) {
 		config.ResponseWriter.DefaultContentType = contentType
+		config.BodyUnmarshaler.DefaultContentType = contentType
 	}
 }
 
@@ -104,12 +123,12 @@ func WithQueryParameters(params interface{}) CoreOption {
 
 func WithBody(body interface{}) CoreOption {
 	return func(config *CoreConfig) {
-		config.JsonBody.Body = body
+		config.BodyUnmarshaler.Body = body
 	}
 }
 
 func WithSkipBodyValidation(skip bool) CoreOption {
 	return func(config *CoreConfig) {
-		config.JsonBody.SkipValidation = skip
+		config.BodyUnmarshaler.SkipValidation = skip
 	}
 }

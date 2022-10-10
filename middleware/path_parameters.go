@@ -73,5 +73,9 @@ func (m PathParameters) Wrap(h server.Handler) server.Handler {
 
 // Doc implements the openapi.OperationDescriptor interface
 func (m PathParameters) Doc(builder *openapi.OperationBuilder) error {
+	if m.Parameters == nil {
+		return nil
+	}
+
 	return builder.WithParams(m.Parameters).Error()
 }

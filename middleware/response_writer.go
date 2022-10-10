@@ -8,6 +8,7 @@ import (
 
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/server"
+	"github.com/mwm-io/gapi/server/openapi"
 )
 
 // WithStatusCode is able to return its http status code.
@@ -15,7 +16,7 @@ type WithStatusCode interface {
 	StatusCode() int
 }
 
-// Marshaler is able to marshal. TODO
+// Marshaler is able to marshal.
 type Marshaler interface {
 	Marshal(v interface{}) ([]byte, error)
 }
@@ -30,6 +31,8 @@ func (f MarshalerFunc) Marshal(v interface{}) ([]byte, error) {
 type ResponseWriterMiddleware struct {
 	Marshalers         map[string]Marshaler
 	DefaultContentType string
+	// Response is only use for the openAPI documentation
+	Response interface{}
 }
 
 // Wrap implements the request.Middleware interface
@@ -54,6 +57,19 @@ func (m ResponseWriterMiddleware) Wrap(h server.Handler) server.Handler {
 
 		return nil, errW
 	})
+}
+
+// Doc implements the openapi.OperationDescriptor interface
+func (m ResponseWriterMiddleware) Doc(builder *openapi.OperationBuilder) error {
+	if m.Response == nil {
+		return nil
+	}
+
+	for contentType, _ := range m.Marshalers {
+		builder.WithResponse(m.Response, openapi.WithMimeType(contentType))
+	}
+
+	return builder.Error()
 }
 
 func (m ResponseWriterMiddleware) writeStatusCode(w http.ResponseWriter, resp interface{}, err error) {
