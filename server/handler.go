@@ -30,14 +30,22 @@ type HttpHandler struct {
 func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler := h.Handler
 
-	if middlewareHandler, ok := h.Handler.(MiddlewareAware); ok {
-		middlewares := middlewareHandler.Middlewares()
-		for i := len(middlewares) - 1; i >= 0; i-- {
-			handler = middlewares[i].Wrap(handler)
-		}
+	middlewares := h.Middlewares()
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		handler = middlewares[i].Wrap(handler)
 	}
 
 	_, _ = handler.Serve(w, r)
+}
+
+// Middlewares implements the MiddlewareAware interface.
+func (h HttpHandler) Middlewares() []Middleware {
+	middlewareHandler, ok := h.Handler.(MiddlewareAware)
+	if !ok {
+		return nil
+	}
+
+	return middlewareHandler.Middlewares()
 }
 
 // HandlerFactory is a function that return a new Handler

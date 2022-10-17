@@ -41,6 +41,7 @@ func ProcessHandlerF() server.HandlerFactory {
 			middleware.WithPathParameters(&h.pathParameters),
 			middleware.WithQueryParameters(&h.queryParameters),
 			middleware.WithBody(&h.body),
+			middleware.WithResponseType(ProcessResponse{}),
 		)
 
 		return h

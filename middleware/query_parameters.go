@@ -7,6 +7,7 @@ import (
 
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/server"
+	"github.com/mwm-io/gapi/server/openapi"
 )
 
 var decoder = schema.NewDecoder()
@@ -32,4 +33,13 @@ func (m QueryParameters) Wrap(h server.Handler) server.Handler {
 
 		return h.Serve(w, r)
 	})
+}
+
+// Doc implements the openapi.OperationDescriptor interface
+func (m QueryParameters) Doc(builder *openapi.OperationBuilder) error {
+	if m.Parameters == nil {
+		return nil
+	}
+
+	return builder.WithParams(m.Parameters).Error()
 }

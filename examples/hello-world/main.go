@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/logging"
+	"github.com/mwm-io/gapi/server/openapi"
 
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/log/cloud_logging"
@@ -26,6 +27,11 @@ func main() {
 	server.AddHandler(r, "GET", "/error/hello", internal.ErrorHelloWorldHandlerF())
 
 	server.AddHandler(r, "POST", "/process/hello/{id}", internal.ProcessHandlerF())
+
+	err := openapi.AddRapidocHandlers(r, openapi.Config{})
+	if err != nil {
+		log.Printf("error while adding rapidoc %+v\n", err)
+	}
 
 	gLog.Info("Starting http server")
 
