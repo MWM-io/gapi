@@ -22,7 +22,7 @@ type Error struct {
 	prev         error
 }
 
-func Err(message string, previousError ...error) Error {
+func Err(message string, previousError ...error) *Error {
 	err := Error{
 		userMessage:  message,
 		kind:         "",
@@ -34,19 +34,23 @@ func Err(message string, previousError ...error) Error {
 	}
 
 	if len(previousError) == 0 {
-		return err
+		return &err
 	}
 
 	if len(previousError) > 1 {
 		gLog.Critical("you cannot call errors.E with more than one error")
-		return Error{}
+		return &err
+	}
+
+	if previousError[0] == nil {
+		return nil
 	}
 
 	err = Build(err, previousError[0])
 	err.prev = previousError[0]
 	err.errorMessage = fmt.Errorf("%s: %w", message, previousError[0]).Error()
 
-	return err
+	return &err
 }
 
 func Warn(message string, previousError ...error) Error {
