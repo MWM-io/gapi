@@ -46,12 +46,12 @@ func (w *Writer) WriteEntry(entry log.Entry) {
 	}
 
 	if entry.StackTrace != nil {
-		stackInfo := entry.GetLastStackInfo()
-
-		loggingEntry.SourceLocation = &logpb.LogEntrySourceLocation{
-			File:     stackInfo.File,
-			Function: stackInfo.Function,
-			Line:     int64(stackInfo.Line),
+		if stackInfo, ok := entry.StackTrace.Last(); ok {
+			loggingEntry.SourceLocation = &logpb.LogEntrySourceLocation{
+				File:     stackInfo.File,
+				Function: stackInfo.Function,
+				Line:     int64(stackInfo.Line),
+			}
 		}
 	}
 

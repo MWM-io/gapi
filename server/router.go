@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -30,8 +29,6 @@ func AddHandler(router *mux.Router, method, path string, f Handler) {
 func ServeAndHandleShutdown(r *mux.Router, opts ...ServerOption) error {
 	srv := NewServer(r, opts...)
 
-	log.Printf("Server Started on %s\n", srv.Addr)
-
 	return StartProcessAndHandleStopSignals(
 		func() error {
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -51,8 +48,6 @@ func ServeAndHandleShutdown(r *mux.Router, opts ...ServerOption) error {
 // This function lock your program until a signal stopping your program is received. (see WithStopSignals)
 func ServeAndHandleTlsShutdown(r *mux.Router, certCRT, certKey string, opts ...ServerOption) error {
 	srv := NewServer(r, opts...)
-
-	log.Printf("Server Started on %s\n", srv.Addr)
 
 	return StartProcessAndHandleStopSignals(
 		func() error {

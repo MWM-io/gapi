@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -46,7 +47,7 @@ func (m BodyUnmarshaler) Wrap(h server.Handler) server.Handler {
 
 		unmarshaler, err := m.resolveContentType(r)
 		if err != nil {
-			return nil, err
+			return nil, errors.Err("unable to resolve content type", err).WithStatus(http.StatusBadRequest)
 		}
 
 		var buffer bytes.Buffer
@@ -58,18 +59,18 @@ func (m BodyUnmarshaler) Wrap(h server.Handler) server.Handler {
 
 		body, err := ioutil.ReadAll(reader)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read body", errors.StatusCodeOpt(http.StatusBadRequest))
+			return nil, errors.Err("failed to read body", err).WithStatus(http.StatusBadRequest)
 		}
 
 		if errUnmarshal := unmarshaler.Unmarshal(body, m.Body); errUnmarshal != nil {
-			return nil, errors.Wrap(errUnmarshal, "failed to unmarshal body", errors.StatusCodeOpt(http.StatusBadRequest))
+			return nil, errors.Err("failed to unmarshal body", errUnmarshal).WithStatus(http.StatusBadRequest)
 		}
 
 		r.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
 
 		if v, ok := m.Body.(BodyValidation); !m.SkipValidation && ok {
 			if errValidate := v.Validate(); errValidate != nil {
-				return nil, errValidate
+				return nil, errors.Err("validation failed", errValidate).WithStatus(http.StatusUnprocessableEntity)
 			}
 		}
 
@@ -98,7 +99,7 @@ func (m BodyUnmarshaler) resolveContentType(r *http.Request) (Unmarshaler, error
 
 	wantedType, _, errContent := mime.ParseMediaType(contentType)
 	if errContent != nil {
-		return nil, errors.Wrap(errContent, "unknown content-type", errors.StatusCodeOpt(http.StatusBadRequest))
+		return nil, errors.Err(fmt.Sprintf("unknown content-type %s", contentType), errContent)
 	}
 
 	if wantedType == "" || wantedType == "*/*" {
@@ -107,7 +108,7 @@ func (m BodyUnmarshaler) resolveContentType(r *http.Request) (Unmarshaler, error
 
 	unmarshaler, ok := m.Unmarshalers[wantedType]
 	if !ok || unmarshaler == nil {
-		return nil, errors.Wrap(errContent, "unsupported content-type", errors.StatusCodeOpt(http.StatusBadRequest))
+		return nil, errors.Err(fmt.Sprintf("unsupported content-type %s", wantedType))
 	}
 
 	return unmarshaler, nil

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -31,7 +32,7 @@ func (m PathParameters) Wrap(h server.Handler) server.Handler {
 			pathParam := typeOfParameters.Field(i).Tag.Get("path")
 			val, ok := mux.Vars(r)[pathParam]
 			if !ok {
-				return nil, errors.Errorf(http.StatusInternalServerError, "unknown path params")
+				return nil, errors.Err("unknown path params").WithStatus(http.StatusInternalServerError)
 			}
 
 			field := v.FieldByName(typeOfParameters.Field(i).Name)
@@ -39,14 +40,14 @@ func (m PathParameters) Wrap(h server.Handler) server.Handler {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				x, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					return nil, errors.Errorf(http.StatusBadRequest, "%s must be a number", typeOfParameters.Field(i).Name)
+					return nil, errors.Err(fmt.Sprintf("%s must be a number", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
 				}
 				field.SetInt(x)
 
 			case reflect.Float64, reflect.Float32:
 				x, err := strconv.ParseFloat(val, 64)
 				if err != nil {
-					return nil, errors.Errorf(http.StatusBadRequest, "%s must be a float", typeOfParameters.Field(i).Name)
+					return nil, errors.Err(fmt.Sprintf("%s must be a float", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
 				}
 				field.SetFloat(x)
 
@@ -57,13 +58,13 @@ func (m PathParameters) Wrap(h server.Handler) server.Handler {
 				if reflect.TypeOf(i) == reflect.TypeOf([]byte(nil)) {
 					field.SetBytes([]byte(val))
 				} else {
-					return nil, errors.Errorf(http.StatusBadRequest, "cannot have a slice in parameters")
+					return nil, errors.Err("cannot have a slice in parameters").WithStatus(http.StatusBadRequest)
 				}
 
 			case reflect.String:
 				field.SetString(val)
 			default:
-				return nil, errors.Errorf(http.StatusBadRequest, "cannot have a parameter with %q type", field.Kind().String())
+				return nil, errors.Err(fmt.Sprintf("cannot have a parameter with %q type", field.Kind().String())).WithStatus(http.StatusBadRequest)
 			}
 		}
 

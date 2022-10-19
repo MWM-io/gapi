@@ -26,15 +26,7 @@ func (s EntryMarshalerFunc) Marshal(entry Entry) []byte {
 
 // JSONEntryMarshaler serialize an entry to JSON.
 var JSONEntryMarshaler = EntryMarshalerFunc(func(entry Entry) []byte {
-	jsEntry := struct {
-		Entry
-		StackTrace []StackInfo
-	}{
-		Entry:      entry,
-		StackTrace: entry.GetStackInfo(),
-	}
-
-	js, _ := json.Marshal(jsEntry)
+	js, _ := json.Marshal(entry)
 
 	return js
 })

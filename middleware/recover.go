@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/mwm-io/gapi/errors"
+	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/server"
 )
 
@@ -15,7 +17,9 @@ func (r Recover) Wrap(h server.Handler) server.Handler {
 	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (result interface{}, err error) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				err = errors.Errorf(http.StatusInternalServerError, "Panic: %v", rec)
+				err = errors.Err("Panic: %v", fmt.Errorf("%v", rec)).
+					WithStatus(http.StatusInternalServerError).
+					WithSeverity(gLog.CriticalSeverity)
 			}
 		}()
 

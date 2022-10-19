@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -140,7 +141,7 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 
 	wantedType, _, errAccept := mime.ParseMediaType(accept)
 	if errAccept != nil {
-		return "", nil, errors.Wrap(errAccept, "unknown content-type", errors.StatusCodeOpt(http.StatusBadRequest))
+		return "", nil, errors.Err(fmt.Sprintf("unknown content-type %s", accept), errAccept).WithStatus(http.StatusBadRequest)
 	}
 
 	if wantedType == "" || wantedType == "*/*" {
@@ -149,7 +150,7 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 
 	marshaler, ok := m.Marshalers[wantedType]
 	if !ok || marshaler == nil {
-		return "", nil, errors.Wrap(errAccept, "unsupported content-type", errors.StatusCodeOpt(http.StatusBadRequest))
+		return "", nil, errors.Err(fmt.Sprintf("unsupported content-type %s", wantedType), errAccept).WithStatus(http.StatusBadRequest)
 	}
 
 	return wantedType, marshaler, nil
