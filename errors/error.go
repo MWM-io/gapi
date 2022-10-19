@@ -44,7 +44,7 @@ func Err(message string, previousError ...error) Error {
 
 	err = Build(err, previousError[0])
 	err.prev = previousError[0]
-	err.errorMessage = fmt.Errorf("%s\n  %w", message, previousError[0]).Error()
+	err.errorMessage = fmt.Errorf("%s:  %w", message, previousError[0]).Error()
 
 	return err
 }

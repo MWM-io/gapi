@@ -24,12 +24,18 @@ func GlobalLogger() *Logger {
 	globalLoggerMu.RUnlock()
 
 	SetGlobalLogger(NewDefaultLogger(NewWriter(EntryMarshalerFunc(func(entry Entry) []byte {
+		var lastFrameStr string
+		lastFrame, ok := entry.StackTrace.Last()
+		if ok && entry.Severity <= WarnSeverity {
+			lastFrameStr = fmt.Sprintf("\n                              %s %s %d", lastFrame.File, lastFrame.Function, lastFrame.Line)
+		}
+
 		return []byte(fmt.Sprintf(
-			"%-9s %s | %s\n%s",
+			"%-9s %s | %s%s",
 			entry.Severity.String(),
 			entry.Timestamp.Format("15:04:05.999999999"),
 			entry.Message,
-			entry.StackTrace.String(),
+			lastFrameStr,
 		))
 	}), os.Stdout)))
 
