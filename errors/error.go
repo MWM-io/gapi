@@ -49,13 +49,23 @@ func Wrap(previousError error, message string) ErrorI {
 		errorMessage: message,
 		timestamp:    time.Now(),
 		status:       http.StatusInternalServerError,
-		severity:     gLog.ErrorSeverity,
+		severity:     gLog.DefaultSeverity,
 		stackTrace:   stacktrace.New(),
 	}
 	err.prev = previousError
 	err.errorMessage = fmt.Errorf("%s: %w", message, previousError).Error()
 
-	return Build(err.ErrorI(), previousError)
+	errI := Build(err.ErrorI(), previousError)
+
+	if errI.Severity() == gLog.DefaultSeverity {
+		if status := errI.StatusCode(); status >= 400 && status < 500 {
+			errI = errI.WithSeverity(gLog.WarnSeverity)
+		} else {
+			errI = errI.WithSeverity(gLog.ErrorSeverity)
+		}
+	}
+
+	return errI
 }
 
 func Err(message string) ErrorI {

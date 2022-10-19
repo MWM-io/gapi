@@ -6,14 +6,14 @@ import (
 
 var (
 	builderMux sync.RWMutex
-	builders   = []ErrorBuilder{}
+	builders   []ErrorBuilder
 )
 
-func AddBuilders(builders ...ErrorBuilder) {
+func AddBuilders(errorBuilders ...ErrorBuilder) {
 	builderMux.Lock()
 	defer builderMux.Unlock()
 
-	builders = append(builders, builders...)
+	builders = append(builders, errorBuilders...)
 }
 
 func Build(err ErrorI, sourceError error) ErrorI {

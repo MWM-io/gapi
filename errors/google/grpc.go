@@ -20,8 +20,7 @@ func init() {
 }
 
 var GrpcCodeErrorBuilder = errors.ErrorBuilderFunc(func(err errors.ErrorI, sourceError error) errors.ErrorI {
-
-	switch status.Code(err) {
+	switch status.Code(sourceError) {
 
 	case codes.InvalidArgument:
 		err = err.WithStatus(http.StatusNotAcceptable)
