@@ -19,7 +19,8 @@ func init() {
 	)
 }
 
-var GrpcCodeErrorBuilder = errors.ErrorBuilderFunc(func(err errors.Error, sourceError error) errors.Error {
+var GrpcCodeErrorBuilder = errors.ErrorBuilderFunc(func(err errors.ErrorI, sourceError error) errors.ErrorI {
+
 	switch status.Code(err) {
 
 	case codes.InvalidArgument:

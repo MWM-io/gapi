@@ -11,6 +11,22 @@ import (
 	"github.com/mwm-io/gapi/stacktrace"
 )
 
+// ErrorI represents the interface for the Error struct.
+// It is necessary so we can compare nil errors. (nil.(*Error) != nil)
+type ErrorI interface {
+	error
+	Unwrap() error
+	json.Marshaler
+	xml.Marshaler
+	StatusCode() int
+	Severity() gLog.Severity
+	StackTrace() gLog.StackTrace
+	WithStatus(status int) ErrorI
+	WithMessage(message string) ErrorI
+	WithKind(kind string) ErrorI
+	WithSeverity(severity gLog.Severity) ErrorI
+}
+
 type Error struct {
 	userMessage  string
 	kind         string
@@ -22,21 +38,27 @@ type Error struct {
 	prev         error
 }
 
-func Wrap(previousError error, message string) *Error {
+func Wrap(previousError error, message string) ErrorI {
 	if previousError == nil {
 		return nil
 	}
 
-	err := Err(message)
-
-	err = Build(err, previousError)
+	err := Error{
+		userMessage:  message,
+		kind:         "",
+		errorMessage: message,
+		timestamp:    time.Now(),
+		status:       http.StatusInternalServerError,
+		severity:     gLog.ErrorSeverity,
+		stackTrace:   stacktrace.New(),
+	}
 	err.prev = previousError
 	err.errorMessage = fmt.Errorf("%s: %w", message, previousError).Error()
 
-	return &err
+	return Build(err.ErrorI(), previousError)
 }
 
-func Err(message string) Error {
+func Err(message string) ErrorI {
 	return Error{
 		userMessage:  message,
 		kind:         "",
@@ -51,6 +73,10 @@ func Err(message string) Error {
 // Error implements the error interface.
 func (e Error) Error() string {
 	return e.errorMessage
+}
+
+func (e Error) ErrorI() ErrorI {
+	return e
 }
 
 // Unwrap /
@@ -71,25 +97,25 @@ func (e Error) StackTrace() gLog.StackTrace {
 	return e.stackTrace
 }
 
-func (e Error) WithStatus(status int) Error {
+func (e Error) WithStatus(status int) ErrorI {
 	e.status = status
 
 	return e
 }
 
-func (e Error) WithMessage(message string) Error {
+func (e Error) WithMessage(message string) ErrorI {
 	e.userMessage = message
 
 	return e
 }
 
-func (e Error) WithKind(kind string) Error {
+func (e Error) WithKind(kind string) ErrorI {
 	e.kind = kind
 
 	return e
 }
 
-func (e Error) WithSeverity(severity gLog.Severity) Error {
+func (e Error) WithSeverity(severity gLog.Severity) ErrorI {
 	e.severity = severity
 
 	return e

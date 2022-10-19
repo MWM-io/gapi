@@ -16,7 +16,7 @@ func AddBuilders(builders ...ErrorBuilder) {
 	builders = append(builders, builders...)
 }
 
-func Build(err Error, sourceError error) Error {
+func Build(err ErrorI, sourceError error) ErrorI {
 	builderMux.RLock()
 	defer builderMux.RUnlock()
 
@@ -29,11 +29,11 @@ func Build(err Error, sourceError error) Error {
 
 // ErrorBuilder will try to interpret the sourceErr to populate Error with additional data.
 type ErrorBuilder interface {
-	Build(err Error, sourceError error) Error
+	Build(err ErrorI, sourceError error) ErrorI
 }
 
-type ErrorBuilderFunc func(err Error, sourceError error) Error
+type ErrorBuilderFunc func(err ErrorI, sourceError error) ErrorI
 
-func (e ErrorBuilderFunc) Build(err Error, sourceError error) Error {
+func (e ErrorBuilderFunc) Build(err ErrorI, sourceError error) ErrorI {
 	return e(err, sourceError)
 }
