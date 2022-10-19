@@ -56,7 +56,7 @@ func (b *OperationBuilder) Error() error {
 
 	var err error
 	for _, item := range b.err {
-		err = errors.Err(fmt.Sprintf("%+v", item), err)
+		err = errors.Wrap(err, fmt.Sprintf("%+v", item))
 	}
 
 	return err

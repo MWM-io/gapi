@@ -141,7 +141,7 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 
 	wantedType, _, errAccept := mime.ParseMediaType(accept)
 	if errAccept != nil {
-		return "", nil, errors.Err(fmt.Sprintf("unknown content-type %s", accept), errAccept).WithStatus(http.StatusBadRequest)
+		return "", nil, errors.Wrap(errAccept, fmt.Sprintf("unknown content-type %s", accept)).WithStatus(http.StatusBadRequest)
 	}
 
 	if wantedType == "" || wantedType == "*/*" {
@@ -150,7 +150,7 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 
 	marshaler, ok := m.Marshalers[wantedType]
 	if !ok || marshaler == nil {
-		return "", nil, errors.Err(fmt.Sprintf("unsupported content-type %s", wantedType), errAccept).WithStatus(http.StatusBadRequest)
+		return "", nil, errors.Err(fmt.Sprintf("unsupported content-type %s", wantedType)).WithStatus(http.StatusBadRequest)
 	}
 
 	return wantedType, marshaler, nil
