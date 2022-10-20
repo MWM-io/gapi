@@ -57,7 +57,26 @@ func NewEntry(msg string) Entry {
 }
 
 // EntryOption is a function that will add information to an entry.
+// EntryOptions must check that the field they modify hasn't been set to respect the option order.
 type EntryOption func(entry *Entry)
+
+// MultiOpt combine multiple options into one EntryOption.
+// Options order will be inversed so that the first one is executed first.
+func MultiOpt(opts ...EntryOption) EntryOption {
+	return func(entry *Entry) {
+		for i := range opts {
+			opts[len(opts)-i-1](entry)
+		}
+	}
+}
+
+func MessageOpt(message string) EntryOption {
+	return func(entry *Entry) {
+		if entry.Message == "" {
+			entry.Message = message
+		}
+	}
+}
 
 // LabelsOpt set default labels.
 func LabelsOpt(labels map[string]string) EntryOption {
@@ -67,6 +86,10 @@ func LabelsOpt(labels map[string]string) EntryOption {
 		}
 
 		for key, value := range labels {
+			if _, ok := entry.Labels[key]; ok {
+				continue
+			}
+
 			entry.Labels[key] = value
 		}
 	}
@@ -80,6 +103,10 @@ func FieldsOpt(fields map[string]interface{}) EntryOption {
 		}
 
 		for key, value := range fields {
+			if _, ok := entry.Fields[key]; ok {
+				continue
+			}
+
 			entry.Fields[key] = value
 		}
 	}
@@ -88,33 +115,57 @@ func FieldsOpt(fields map[string]interface{}) EntryOption {
 // SeverityOpt set the default Severity.
 func SeverityOpt(severity Severity) EntryOption {
 	return func(entry *Entry) {
-		entry.Severity = severity
+		if entry.Severity == DefaultSeverity {
+			entry.Severity = severity
+		}
 	}
 }
 
 func ContextOpt(ctx context.Context) EntryOption {
 	return func(entry *Entry) {
-		entry.Context = ctx
+		if entry.Context == context.Background() {
+			entry.Context = ctx
+		}
+	}
+}
+
+func TimestampOpt(t time.Time) EntryOption {
+	return func(entry *Entry) {
+		if entry.Timestamp.IsZero() {
+			entry.Timestamp = t
+		}
+	}
+}
+
+func StackTraceOpt(trace StackTrace) EntryOption {
+	return func(entry *Entry) {
+		if entry.StackTrace == nil {
+			entry.StackTrace = trace
+		}
+	}
+}
+
+func TracingOpt(traceID, spanID string, isSampled bool) EntryOption {
+	return func(entry *Entry) {
+		if entry.TraceID != "" || entry.SpanID != "" {
+			return
+		}
+
+		entry.TraceID = traceID
+		entry.SpanID = spanID
+		entry.IsTraceSampled = isSampled
 	}
 }
 
 // TimestampNowOpt set the default timestamp of an entry to time.Now() when applied.
 // (ie: when the entry will be built)
 func TimestampNowOpt() EntryOption {
-	return func(entry *Entry) {
-		entry.Timestamp = time.Now()
-	}
+	return TimestampOpt(time.Now())
 }
 
 // DefaultStackTraceOpt set the default stack trace of an entry.
 func DefaultStackTraceOpt() EntryOption {
-	return func(entry *Entry) {
-		if entry.StackTrace != nil {
-			return
-		}
-
-		entry.StackTrace = stacktrace.New()
-	}
+	return StackTraceOpt(stacktrace.New())
 }
 
 // OpencensusTraceOpt set the trace information from the opencensus context.
@@ -125,14 +176,14 @@ func OpencensusTraceOpt() EntryOption {
 		}
 
 		spanContext := opencensus.FromContext(entry.Context).SpanContext()
-		if traceID := spanContext.TraceID.String(); traceID != "00000000000000000000000000000000" {
-			entry.TraceID = traceID
-		}
-		if spanID := spanContext.SpanID.String(); spanID != "0000000000000000" {
-			entry.SpanID = spanID
-		}
-		entry.IsTraceSampled = spanContext.IsSampled()
+		traceID := spanContext.TraceID.String()
+		spanID := spanContext.SpanID.String()
 
+		if traceID == "00000000000000000000000000000000" && spanID != "0000000000000000" {
+			return
+		}
+
+		TracingOpt(traceID, spanID, spanContext.IsSampled())(entry)
 	}
 }
 
@@ -144,13 +195,13 @@ func OpentelemetryTraceOpt() EntryOption {
 		}
 
 		spanContext := opentelemetry.SpanContextFromContext(entry.Context)
-		if traceID := spanContext.TraceID().String(); traceID != "00000000000000000000000000000000" {
-			entry.TraceID = traceID
+		traceID := spanContext.TraceID().String()
+		spanID := spanContext.SpanID().String()
+		if traceID != "00000000000000000000000000000000" && spanID != "0000000000000000" {
+			return
 		}
-		if spanID := spanContext.SpanID().String(); spanID != "0000000000000000" {
-			entry.SpanID = spanID
-		}
-		entry.IsTraceSampled = spanContext.IsSampled()
+
+		TracingOpt(traceID, spanID, spanContext.IsSampled())(entry)
 	}
 }
 
@@ -170,67 +221,63 @@ func OpentelemetryTraceOpt() EntryOption {
 // - interface{ StackTrace() StackTrace }
 func AnyOpt(v interface{}) EntryOption {
 	return func(entry *Entry) {
+		var opts []EntryOption
+
 		if entryErr, ok := v.(error); ok {
-			if entry.Severity == DefaultSeverity {
-				entry.Severity = ErrorSeverity
-			}
-			entry.Message = entryErr.Error()
+			opts = append(opts, SeverityOpt(ErrorSeverity))
+			opts = append(opts, MessageOpt(entryErr.Error()))
 		}
 
 		withMessage, ok := v.(interface{ Message() string })
 		if ok {
-			entry.Message = withMessage.Message()
+			opts = append(opts, MessageOpt(withMessage.Message()))
 		} else if entry.Message == "" {
 			if stringer, ok := v.(fmt.Stringer); ok {
-				entry.Message = stringer.String()
+				opts = append(opts, MessageOpt(stringer.String()))
 			} else {
-				entry.Message = fmt.Sprintf("%v", v)
+				opts = append(opts, MessageOpt(fmt.Sprintf("%v", v)))
 			}
 		}
 
 		withContext, ok := v.(interface{ Context() context.Context })
 		if ok {
-			entry.Context = withContext.Context()
+			opts = append(opts, ContextOpt(withContext.Context()))
 		}
 
 		withTimestamp, ok := v.(interface{ Timestamp() time.Time })
 		if ok {
-			entry.Timestamp = withTimestamp.Timestamp()
+			opts = append(opts, TimestampOpt(withTimestamp.Timestamp()))
 		}
 
 		withSeverity, ok := v.(interface{ Severity() Severity })
 		if ok {
-			entry.Severity = withSeverity.Severity()
+			opts = append(opts, SeverityOpt(withSeverity.Severity()))
 		}
 
 		withLabels, ok := v.(interface{ Labels() map[string]string })
 		if ok {
-			entry.Labels = withLabels.Labels()
+			opts = append(opts, LabelsOpt(withLabels.Labels()))
 		}
 
 		withFields, ok := v.(interface{ Fields() map[string]interface{} })
 		if ok {
-			entry.Fields = withFields.Fields()
+			opts = append(opts, FieldsOpt(withFields.Fields()))
 		}
 
-		withTraceID, ok := v.(interface{ TraceID() string })
+		withTracing, ok := v.(interface {
+			TraceID() string
+			SpanID() string
+			IsTraceSampled() bool
+		})
 		if ok {
-			entry.TraceID = withTraceID.TraceID()
-		}
-
-		withSpanID, ok := v.(interface{ SpanID() string })
-		if ok {
-			entry.SpanID = withSpanID.SpanID()
-		}
-
-		withIsTraceSampled, ok := v.(interface{ IsTraceSampled() bool })
-		if ok {
-			entry.IsTraceSampled = withIsTraceSampled.IsTraceSampled()
+			opts = append(opts, TracingOpt(withTracing.TraceID(), withTracing.SpanID(), withTracing.IsTraceSampled()))
 		}
 
 		withStack, ok := v.(interface{ StackTrace() StackTrace })
 		if ok {
-			entry.StackTrace = withStack.StackTrace()
+			opts = append(opts, StackTraceOpt(withStack.StackTrace()))
 		}
+
+		MultiOpt(opts...)(entry)
 	}
 }

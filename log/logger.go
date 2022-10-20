@@ -50,9 +50,7 @@ func (l *Logger) LogAny(v interface{}, options ...EntryOption) {
 
 // LogEntry logs an entry.
 func (l *Logger) LogEntry(entry Entry) {
-	for _, option := range l.options {
-		option(&entry)
-	}
+	MultiOpt(l.options...)(&entry)
 
 	l.w.WriteEntry(entry)
 }
