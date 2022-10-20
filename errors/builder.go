@@ -4,6 +4,10 @@ import (
 	"sync"
 )
 
+func init() {
+	AddBuilders(defaultBuilder())
+}
+
 var (
 	builderMux sync.RWMutex
 	builders   []ErrorBuilder
@@ -36,4 +40,20 @@ type ErrorBuilderFunc func(err ErrorI, sourceError error) ErrorI
 
 func (e ErrorBuilderFunc) Build(err ErrorI, sourceError error) ErrorI {
 	return e(err, sourceError)
+}
+
+func defaultBuilder() ErrorBuilder {
+	return ErrorBuilderFunc(func(err ErrorI, sourceError error) ErrorI {
+		sourceErr, ok := sourceError.(ErrorI)
+		if !ok {
+			return err
+		}
+
+		return err.
+			WithStatus(sourceErr.StatusCode()).
+			WithSeverity(sourceErr.Severity()).
+			WithTimestamp(sourceErr.Timestamp()).
+			WithKind(sourceErr.Kind()).
+			WithStackTrace(sourceErr.StackTrace())
+	})
 }

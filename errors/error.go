@@ -18,13 +18,19 @@ type ErrorI interface {
 	Unwrap() error
 	json.Marshaler
 	xml.Marshaler
+	Message() string
+	Kind() string
 	StatusCode() int
 	Severity() gLog.Severity
+	Timestamp() time.Time
 	StackTrace() gLog.StackTrace
-	WithStatus(status int) ErrorI
-	WithMessage(message string) ErrorI
-	WithKind(kind string) ErrorI
-	WithSeverity(severity gLog.Severity) ErrorI
+
+	WithMessage(string) ErrorI
+	WithKind(string) ErrorI
+	WithStatus(int) ErrorI
+	WithSeverity(gLog.Severity) ErrorI
+	WithTimestamp(time.Time) ErrorI
+	WithStackTrace(trace gLog.StackTrace) ErrorI
 }
 
 type Error struct {
@@ -34,7 +40,7 @@ type Error struct {
 	status       int
 	severity     gLog.Severity
 	timestamp    time.Time
-	stackTrace   stacktrace.StackTrace
+	stackTrace   gLog.StackTrace
 	prev         error
 }
 
@@ -99,8 +105,20 @@ func (e Error) StatusCode() int {
 	return e.status
 }
 
+func (e Error) Message() string {
+	return e.userMessage
+}
+
+func (e Error) Kind() string {
+	return e.kind
+}
+
 func (e Error) Severity() gLog.Severity {
 	return e.severity
+}
+
+func (e Error) Timestamp() time.Time {
+	return e.timestamp
 }
 
 func (e Error) StackTrace() gLog.StackTrace {
@@ -127,6 +145,18 @@ func (e Error) WithKind(kind string) ErrorI {
 
 func (e Error) WithSeverity(severity gLog.Severity) ErrorI {
 	e.severity = severity
+
+	return e
+}
+
+func (e Error) WithTimestamp(t time.Time) ErrorI {
+	e.timestamp = t
+
+	return e
+}
+
+func (e Error) WithStackTrace(trace gLog.StackTrace) ErrorI {
+	e.stackTrace = trace
 
 	return e
 }
