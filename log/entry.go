@@ -171,15 +171,11 @@ func DefaultStackTraceOpt() EntryOption {
 // OpencensusTraceOpt set the trace information from the opencensus context.
 func OpencensusTraceOpt() EntryOption {
 	return func(entry *Entry) {
-		if entry.TraceID != "" || entry.SpanID != "" {
-			return
-		}
-
 		spanContext := opencensus.FromContext(entry.Context).SpanContext()
 		traceID := spanContext.TraceID.String()
 		spanID := spanContext.SpanID.String()
 
-		if traceID == "00000000000000000000000000000000" && spanID != "0000000000000000" {
+		if traceID == "00000000000000000000000000000000" || spanID == "0000000000000000" {
 			return
 		}
 
@@ -190,14 +186,10 @@ func OpencensusTraceOpt() EntryOption {
 // OpentelemetryTraceOpt set the trace information from the opentelemetry context.
 func OpentelemetryTraceOpt() EntryOption {
 	return func(entry *Entry) {
-		if entry.TraceID != "" || entry.SpanID != "" {
-			return
-		}
-
 		spanContext := opentelemetry.SpanContextFromContext(entry.Context)
 		traceID := spanContext.TraceID().String()
 		spanID := spanContext.SpanID().String()
-		if traceID != "00000000000000000000000000000000" && spanID != "0000000000000000" {
+		if traceID == "00000000000000000000000000000000" || spanID == "0000000000000000" {
 			return
 		}
 
