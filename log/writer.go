@@ -1,13 +1,34 @@
 package log
 
 import (
-	"encoding/json"
 	"io"
 )
 
 // EntryWriter is able to write an entry.
+// It's the concrete "logger".
+// It should handle its own errors.
 type EntryWriter interface {
 	WriteEntry(Entry)
+}
+
+// Writer is able to write entries, transforming them given an EntryMarshaler and writing them using an io.Writer.
+type Writer struct {
+	marshaler EntryMarshaler
+	writer    io.Writer
+}
+
+// NewWriter returns a new Writer.
+func NewWriter(marshaler EntryMarshaler, writer io.Writer) *Writer {
+	return &Writer{
+		marshaler: marshaler,
+		writer:    writer,
+	}
+}
+
+// WriteEntry implements the EntryWriter interface.
+func (s *Writer) WriteEntry(entry Entry) {
+	_, _ = s.writer.Write(s.marshaler.Marshal(entry))
+	_, _ = s.writer.Write([]byte("\n"))
 }
 
 // EntryMarshaler is able to serialize an entry to a []byte.
@@ -22,33 +43,6 @@ type EntryMarshalerFunc func(entry Entry) []byte
 // Marshal implements the EntryMarshaler interface.
 func (s EntryMarshalerFunc) Marshal(entry Entry) []byte {
 	return s(entry)
-}
-
-// JSONEntryMarshaler serialize an entry to JSON.
-var JSONEntryMarshaler = EntryMarshalerFunc(func(entry Entry) []byte {
-	js, _ := json.Marshal(entry)
-
-	return js
-})
-
-// Writer is able to write entries, transforming them given an EntryMarshaler and writing them using an io.Writer.
-type Writer struct {
-	marshaler EntryMarshaler
-	writer    io.Writer
-}
-
-// NewWriter returns a new writer.
-func NewWriter(marshaler EntryMarshaler, writer io.Writer) *Writer {
-	return &Writer{
-		marshaler: marshaler,
-		writer:    writer,
-	}
-}
-
-// WriteEntry implements the EntryWriter interface.
-func (s *Writer) WriteEntry(entry Entry) {
-	_, _ = s.writer.Write(s.marshaler.Marshal(entry))
-	_, _ = s.writer.Write([]byte("\n"))
 }
 
 // MultiWriter is an EntryWriter that write to all its children.

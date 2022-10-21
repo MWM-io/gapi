@@ -1,7 +1,7 @@
 /*
 Package log provides a simple and extensible logger.
 
-Usage
+## Usage
 
 First, you need to build your logger instance, using log.NewDefaultLogger,
 specifying what's your output (log.EntryWriter).
@@ -29,13 +29,13 @@ You can then use this logger instance in 3 different ways:
 	ctx = log.WithContext(ctx, logger)
 	log.LogC(ctx, "my log")
 
-With Context
+## With Context
 
 If you can, you should rather use logging function with context.
 The global functions with context will first try to get the logger from the context,
 but if none is found, it will use the global logger.
 
-Package design
+## Package design
 
 Its flow is based around the Entry struct.
 You can log anything, (ie with log.LogAny) the input will be converted into an Entry.

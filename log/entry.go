@@ -3,52 +3,50 @@ package log
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"time"
 
 	opencensus "go.opencensus.io/trace"
 	opentelemetry "go.opentelemetry.io/otel/trace"
-
-	"github.com/mwm-io/gapi/stacktrace"
 )
 
-type StackTrace interface {
-	fmt.Stringer
-	Frames() []runtime.Frame
-	Last() (runtime.Frame, bool)
-}
-
-// Entry contains all the data of a log entry.
+// Entry represents a single log message.
+// It carries all the data for your log message.
+//
+// Although the fields are exported, you should use the EntryOption  to modify your entries,
+// that will avoid some weird override behavior.
 type Entry struct {
 	// Context is current context. Ie: the request context.
-	Context context.Context
+	// It is mainly used so that other EntryOption can fill other Entry fields. (ie: tracing)
+	Context context.Context `json:"-"`
 
 	// Timestamp is the time of the entry. If zero, the current time is used.
-	Timestamp time.Time
+	Timestamp time.Time `json:"timestamp"`
 
 	// Severity is the severity level of the log entry.
-	Severity Severity
+	Severity Severity `json:"severity"`
 
 	// Message is the main message you want to log.
-	// For easier filtering/querying, use generic messages without variables, and use fields to store the variables.
-	Message string
+	Message string `json:"message"`
 
 	// Labels are a map of <key:value> strings to contain data that could be indexed for faster queries.
-	Labels map[string]string
+	Labels map[string]string `json:"labels"`
+
 	// Fields contains additional information to complete the message.
 	// It can contain more complex data than labels
-	Fields map[string]interface{}
+	Fields map[string]interface{} `json:"fields"`
 
 	// TraceID is a unique identity of a trace.
-	TraceID string
+	TraceID string `json:"trace_id"`
 	// SpanID is a unique identity of a span in a trace.
-	SpanID string
+	SpanID string `json:"span_id"`
 	// IsTraceSampled indicates whether the trace is sampled or not.
-	IsTraceSampled bool
+	IsTraceSampled bool `json:"is_trace_sampled"`
+
 	// StackTrace represents the stackTrace where the log was created.
-	StackTrace StackTrace
+	StackTrace StackTrace `json:"stack_trace"`
 }
 
+// NewEntry builds a new Entry.
 func NewEntry(msg string) Entry {
 	return Entry{
 		Message: msg,
@@ -56,12 +54,13 @@ func NewEntry(msg string) Entry {
 	}
 }
 
-// EntryOption is a function that will add information to an entry.
+// EntryOption is a function that will modify an entry.
+// It can be passed to a logger to be applied to all its logging calls.
 // EntryOptions must check that the field they modify hasn't been set to respect the option order.
 type EntryOption func(entry *Entry)
 
-// MultiOpt combine multiple options into one EntryOption.
-// Options order will be inversed so that the first one is executed first.
+// MultiOpt combines multiple options into one EntryOption.
+// Options order will be reversed so that the first one is executed last.
 func MultiOpt(opts ...EntryOption) EntryOption {
 	return func(entry *Entry) {
 		for i := range opts {
@@ -70,6 +69,7 @@ func MultiOpt(opts ...EntryOption) EntryOption {
 	}
 }
 
+// MessageOpt will set the message if it is empty.
 func MessageOpt(message string) EntryOption {
 	return func(entry *Entry) {
 		if entry.Message == "" {
@@ -78,7 +78,8 @@ func MessageOpt(message string) EntryOption {
 	}
 }
 
-// LabelsOpt set default labels.
+// LabelsOpt sets labels values.
+// If a label already exists, it won't be override.
 func LabelsOpt(labels map[string]string) EntryOption {
 	return func(entry *Entry) {
 		if entry.Labels == nil {
@@ -95,7 +96,8 @@ func LabelsOpt(labels map[string]string) EntryOption {
 	}
 }
 
-// FieldsOpt set default fields.
+// FieldsOpt sets fields values.
+// If a field already exists, it won't be override.
 func FieldsOpt(fields map[string]interface{}) EntryOption {
 	return func(entry *Entry) {
 		if entry.Fields == nil {
@@ -112,7 +114,7 @@ func FieldsOpt(fields map[string]interface{}) EntryOption {
 	}
 }
 
-// SeverityOpt set the default Severity.
+// SeverityOpt sets the severity if it is still DefaultSeverity.
 func SeverityOpt(severity Severity) EntryOption {
 	return func(entry *Entry) {
 		if entry.Severity == DefaultSeverity {
@@ -121,6 +123,7 @@ func SeverityOpt(severity Severity) EntryOption {
 	}
 }
 
+// ContextOpt sets the context if it is still context.Background().
 func ContextOpt(ctx context.Context) EntryOption {
 	return func(entry *Entry) {
 		if entry.Context == context.Background() {
@@ -129,6 +132,7 @@ func ContextOpt(ctx context.Context) EntryOption {
 	}
 }
 
+// TimestampOpt sets the timestamp it is still time.IsZero().
 func TimestampOpt(t time.Time) EntryOption {
 	return func(entry *Entry) {
 		if entry.Timestamp.IsZero() {
@@ -137,6 +141,7 @@ func TimestampOpt(t time.Time) EntryOption {
 	}
 }
 
+// StackTraceOpt sets the stacktrace if it is still nil.
 func StackTraceOpt(trace StackTrace) EntryOption {
 	return func(entry *Entry) {
 		if entry.StackTrace == nil {
@@ -145,6 +150,7 @@ func StackTraceOpt(trace StackTrace) EntryOption {
 	}
 }
 
+// TracingOpt sets the tracing data it is not yet set.
 func TracingOpt(traceID, spanID string, isSampled bool) EntryOption {
 	return func(entry *Entry) {
 		if entry.TraceID != "" || entry.SpanID != "" {
@@ -157,18 +163,12 @@ func TracingOpt(traceID, spanID string, isSampled bool) EntryOption {
 	}
 }
 
-// TimestampNowOpt set the default timestamp of an entry to time.Now() when applied.
-// (ie: when the entry will be built)
+// TimestampNowOpt sets the timestamp of an entry to time.Now()
 func TimestampNowOpt() EntryOption {
 	return TimestampOpt(time.Now())
 }
 
-// DefaultStackTraceOpt set the default stack trace of an entry.
-func DefaultStackTraceOpt() EntryOption {
-	return StackTraceOpt(stacktrace.New())
-}
-
-// OpencensusTraceOpt set the trace information from the opencensus context.
+// OpencensusTraceOpt sets the trace information from the opencensus context.
 func OpencensusTraceOpt() EntryOption {
 	return func(entry *Entry) {
 		spanContext := opencensus.FromContext(entry.Context).SpanContext()
@@ -183,12 +183,13 @@ func OpencensusTraceOpt() EntryOption {
 	}
 }
 
-// OpentelemetryTraceOpt set the trace information from the opentelemetry context.
+// OpentelemetryTraceOpt sets the trace information from the opentelemetry context.
 func OpentelemetryTraceOpt() EntryOption {
 	return func(entry *Entry) {
 		spanContext := opentelemetry.SpanContextFromContext(entry.Context)
 		traceID := spanContext.TraceID().String()
 		spanID := spanContext.SpanID().String()
+
 		if traceID == "00000000000000000000000000000000" || spanID == "0000000000000000" {
 			return
 		}
@@ -207,9 +208,11 @@ func OpentelemetryTraceOpt() EntryOption {
 // - interface{ Severity() Severity }
 // - interface{ Labels() map[string]string }
 // - interface{ Fields() map[string]interface{} }
-// - interface{ TraceID() string }
-// - interface{ SpanID() string }
-// - interface{ IsTraceSampled() bool }
+// - interface {
+//		TraceID() string
+//		SpanID() string
+//		IsTraceSampled() bool
+//	}
 // - interface{ StackTrace() StackTrace }
 func AnyOpt(v interface{}) EntryOption {
 	return func(entry *Entry) {

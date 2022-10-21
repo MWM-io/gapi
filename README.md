@@ -4,3 +4,7 @@
 
 This repository contains a set of small packages
 we use at MWM to build restfull APIs.
+
+## Examples
+
+You can see examples implementations in the examples folder.

@@ -20,14 +20,12 @@ func NewLogger(w EntryWriter, options ...EntryOption) *Logger {
 
 // NewDefaultLogger creates a new logger with the default stack of entry options:
 // - timestamp set to time.Now()
-// - stacktrace
 // - tracing information from context (either opencensus or telemetry)
-// If you don't need theses options, or just need some, you should use NewLogger and chose only the option you need.
+// If you don't need theses options, or just need some, you should use NewLogger and chose only the options you need.
 func NewDefaultLogger(w EntryWriter) *Logger {
 	return NewLogger(
 		w,
 		TimestampNowOpt(),
-		DefaultStackTraceOpt(),
 		OpencensusTraceOpt(),
 		OpentelemetryTraceOpt(),
 	)
