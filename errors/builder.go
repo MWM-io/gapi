@@ -13,6 +13,7 @@ var (
 	builders   []ErrorBuilder
 )
 
+// AddBuilders will register the given ErrorBuilder to be used.
 func AddBuilders(errorBuilders ...ErrorBuilder) {
 	builderMux.Lock()
 	defer builderMux.Unlock()
@@ -20,7 +21,9 @@ func AddBuilders(errorBuilders ...ErrorBuilder) {
 	builders = append(builders, errorBuilders...)
 }
 
-func Build(err ErrorI, sourceError error) ErrorI {
+// Build will call all registered builders to add additional information on the given Error,
+// depending on the sourceError
+func Build(err Error, sourceError error) Error {
 	builderMux.RLock()
 	defer builderMux.RUnlock()
 
@@ -33,18 +36,20 @@ func Build(err ErrorI, sourceError error) ErrorI {
 
 // ErrorBuilder will try to interpret the sourceErr to populate Error with additional data.
 type ErrorBuilder interface {
-	Build(err ErrorI, sourceError error) ErrorI
+	Build(err Error, sourceError error) Error
 }
 
-type ErrorBuilderFunc func(err ErrorI, sourceError error) ErrorI
+// ErrorBuilderFunc is a function that implements the ErrorBuilder interface.
+type ErrorBuilderFunc func(err Error, sourceError error) Error
 
-func (e ErrorBuilderFunc) Build(err ErrorI, sourceError error) ErrorI {
+// Build implements the ErrorBuilder interface.
+func (e ErrorBuilderFunc) Build(err Error, sourceError error) Error {
 	return e(err, sourceError)
 }
 
 func defaultBuilder() ErrorBuilder {
-	return ErrorBuilderFunc(func(err ErrorI, sourceError error) ErrorI {
-		sourceErr, ok := sourceError.(ErrorI)
+	return ErrorBuilderFunc(func(err Error, sourceError error) Error {
+		sourceErr, ok := sourceError.(Error)
 		if !ok {
 			return err
 		}

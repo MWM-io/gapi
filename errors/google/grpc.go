@@ -1,4 +1,4 @@
-// Package google provide and register error builders to interpret google errors into gapi errors.
+// Package google provides and registers error builders to interpret google errors into gapi errors.
 //
 // In order to use it, you just need to import this package:
 // import _ "github.com/mwm-io/gapi/errors/google"
@@ -19,9 +19,10 @@ func init() {
 	)
 }
 
-var GrpcCodeErrorBuilder = errors.ErrorBuilderFunc(func(err errors.ErrorI, sourceError error) errors.ErrorI {
+// GrpcCodeErrorBuilder is an ErrorBuilderFunc that will check the grpc status of the sourceErr
+// and set the corresponding http status.
+var GrpcCodeErrorBuilder = errors.ErrorBuilderFunc(func(err errors.Error, sourceError error) errors.Error {
 	switch status.Code(sourceError) {
-
 	case codes.InvalidArgument:
 		err = err.WithStatus(http.StatusNotAcceptable)
 

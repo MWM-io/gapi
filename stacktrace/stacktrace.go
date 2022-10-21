@@ -41,9 +41,15 @@ func (st StackTrace) Frames() []runtime.Frame {
 	return st.frames
 }
 
-func (st StackTrace) LastFrame(ignoredFiles ...string) (runtime.Frame, bool) {
+func (st StackTrace) LastFrame(ignoreGo bool, ignoredFiles ...string) (runtime.Frame, bool) {
 frameLoop:
 	for _, frame := range st.frames {
+		if ignoreGo {
+			if len(strings.Split(frame.Function, "/")) == 1 {
+				continue
+			}
+		}
+
 		for _, ignoredFile := range ignoredFiles {
 			if strings.Contains(frame.File, ignoredFile) {
 				continue frameLoop
@@ -58,5 +64,5 @@ frameLoop:
 
 // Last return the LastFrame outside the gapi package.
 func (st StackTrace) Last() (runtime.Frame, bool) {
-	return st.LastFrame("mwm-io/gapi")
+	return st.LastFrame(true, "/vendor/")
 }

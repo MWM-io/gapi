@@ -11,9 +11,9 @@ import (
 	"github.com/mwm-io/gapi/stacktrace"
 )
 
-// ErrorI represents the interface for the Error struct.
-// It is necessary so we can compare nil errors. (nil.(*Error) != nil)
-type ErrorI interface {
+// Error represents the interface for the FullError struct.
+// It is necessary so we can compare nil errors. (nil.(*FullError) != nil)
+type Error interface {
 	error
 	Unwrap() error
 	json.Marshaler
@@ -25,15 +25,16 @@ type ErrorI interface {
 	Timestamp() time.Time
 	StackTrace() gLog.StackTrace
 
-	WithMessage(string) ErrorI
-	WithKind(string) ErrorI
-	WithStatus(int) ErrorI
-	WithSeverity(gLog.Severity) ErrorI
-	WithTimestamp(time.Time) ErrorI
-	WithStackTrace(trace gLog.StackTrace) ErrorI
+	WithMessage(string) Error
+	WithKind(string) Error
+	WithStatus(int) Error
+	WithSeverity(gLog.Severity) Error
+	WithTimestamp(time.Time) Error
+	WithStackTrace(trace gLog.StackTrace) Error
 }
 
-type Error struct {
+// FullError is a concrete error that implements the Error interface
+type FullError struct {
 	userMessage  string
 	kind         string
 	errorMessage string
@@ -44,12 +45,13 @@ type Error struct {
 	prev         error
 }
 
-func Wrap(previousError error, message string) ErrorI {
+// Wrap will wrap the given error and return a new Error.
+func Wrap(previousError error, message string) Error {
 	if previousError == nil {
 		return nil
 	}
 
-	err := Error{
+	err := &FullError{
 		userMessage:  message,
 		kind:         "",
 		errorMessage: message,
@@ -61,119 +63,136 @@ func Wrap(previousError error, message string) ErrorI {
 	err.prev = previousError
 	err.errorMessage = fmt.Errorf("%s: %w", message, previousError).Error()
 
-	errI := Build(err.ErrorI(), previousError)
-
-	if errI.Severity() == gLog.DefaultSeverity {
-		if status := errI.StatusCode(); status >= 400 && status < 500 {
-			errI = errI.WithSeverity(gLog.WarnSeverity)
-		} else {
-			errI = errI.WithSeverity(gLog.ErrorSeverity)
-		}
-	}
+	errI := Build(err, previousError)
 
 	return errI
 }
 
-func Err(message string) ErrorI {
-	return Error{
+// Err creates a new Error.
+func Err(message string) Error {
+	return &FullError{
 		userMessage:  message,
 		kind:         "",
 		errorMessage: message,
 		timestamp:    time.Now(),
 		status:       http.StatusInternalServerError,
-		severity:     gLog.ErrorSeverity,
+		severity:     gLog.DefaultSeverity,
 		stackTrace:   stacktrace.New(),
 	}
 }
 
-// Error implements the error interface.
-func (e Error) Error() string {
+// FullError implements the error interface.
+// It will return the "developer" message in opposition to the user message,
+// which is returned by FullError.Message
+func (e *FullError) Error() string {
 	return e.errorMessage
 }
 
-func (e Error) ErrorI() ErrorI {
-	return e
-}
-
-// Unwrap /
-func (e Error) Unwrap() error {
+// Unwrap implements the errors.Unwrap interface
+func (e *FullError) Unwrap() error {
 	return e.prev
 }
 
 // StatusCode implements server.WithStatusCode
-func (e Error) StatusCode() int {
+func (e *FullError) StatusCode() int {
 	return e.status
 }
 
-func (e Error) Message() string {
+// Message returns the user message.
+func (e *FullError) Message() string {
 	return e.userMessage
 }
 
-func (e Error) Kind() string {
+// Kind returns the error kind.
+func (e *FullError) Kind() string {
 	return e.kind
 }
 
-func (e Error) Severity() gLog.Severity {
+// Severity implements the gLog.WithSeverity interface.
+func (e *FullError) Severity() gLog.Severity {
+	if e.severity == gLog.DefaultSeverity {
+		return gLog.ErrorSeverity
+	}
+
 	return e.severity
 }
 
-func (e Error) Timestamp() time.Time {
+// Timestamp returns the error timestamp.
+func (e *FullError) Timestamp() time.Time {
 	return e.timestamp
 }
 
-func (e Error) StackTrace() gLog.StackTrace {
+// StackTrace returns the error stacktrace.
+func (e *FullError) StackTrace() gLog.StackTrace {
 	return e.stackTrace
 }
 
-func (e Error) WithStatus(status int) ErrorI {
+// WithStatus sets the error status.
+// It will also modify the severity for status >= 400
+func (e *FullError) WithStatus(status int) Error {
 	e.status = status
+
+	if status >= 400 && status < 500 {
+		e.severity = gLog.WarnSeverity
+	} else if status >= 500 {
+		e.severity = gLog.ErrorSeverity
+	}
 
 	return e
 }
 
-func (e Error) WithMessage(message string) ErrorI {
+// WithMessage sets the user message.
+func (e *FullError) WithMessage(message string) Error {
 	e.userMessage = message
 
 	return e
 }
 
-func (e Error) WithKind(kind string) ErrorI {
+// WithKind sets the error kind.
+func (e *FullError) WithKind(kind string) Error {
 	e.kind = kind
 
 	return e
 }
 
-func (e Error) WithSeverity(severity gLog.Severity) ErrorI {
+// WithSeverity sets the error severity.
+func (e *FullError) WithSeverity(severity gLog.Severity) Error {
 	e.severity = severity
 
 	return e
 }
 
-func (e Error) WithTimestamp(t time.Time) ErrorI {
+// WithTimestamp sets the error timestamp.
+func (e *FullError) WithTimestamp(t time.Time) Error {
 	e.timestamp = t
 
 	return e
 }
 
-func (e Error) WithStackTrace(trace gLog.StackTrace) ErrorI {
+// WithStackTrace sets the error stacktrace.
+func (e *FullError) WithStackTrace(trace gLog.StackTrace) Error {
 	e.stackTrace = trace
 
 	return e
 }
 
+// HttpError is used to json.Marshal or xml.Marshal FullError.
+// You can use it to decode an incoming error.
 type HttpError struct {
 	Message string `json:"message" xml:"message"`
 	Kind    string `json:"kind" xml:"kind"`
 }
 
-func (e Error) MarshalJSON() ([]byte, error) {
+// MarshalJSON implements the json.Marshaler interface.
+func (e *FullError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(HttpError{
 		Message: e.userMessage,
 		Kind:    e.kind,
 	})
 }
 
-func (e Error) MarshalXML(encoder *xml.Encoder, start xml.StartElement) error {
+// MarshalXML implements the xml.Marshaler interface.
+func (e *FullError) MarshalXML(encoder *xml.Encoder, start xml.StartElement) error {
 	return encoder.EncodeElement(HttpError{
 		Message: e.userMessage,
 		Kind:    e.kind,
