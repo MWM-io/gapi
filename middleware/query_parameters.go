@@ -12,7 +12,7 @@ import (
 
 var decoder = schema.NewDecoder()
 
-// QueryParameters is a pre-processor that will set the request parameters into the Parameters field.
+// QueryParameters is a middleware that will set the request query parameters into the Parameters field.
 type QueryParameters struct {
 	Parameters interface{}
 }

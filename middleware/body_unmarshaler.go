@@ -21,19 +21,24 @@ type Unmarshaler interface {
 // UnmarshalerFunc is function type that implements Unmarshaler interface.
 type UnmarshalerFunc func(b []byte, v interface{}) error
 
+// Unmarshal implements the Unmarshaler interface.
 func (f UnmarshalerFunc) Unmarshal(b []byte, v interface{}) error {
 	return f(b, v)
 }
 
-// BodyUnmarshaler is a pre-processor that will Unmarshal the request body into the Body field.
+// BodyUnmarshaler is a middleware that will Unmarshal the incoming request body into the Body field.
 type BodyUnmarshaler struct {
-	Body               interface{}
-	Unmarshalers       map[string]Unmarshaler
+	// Body is the struct you want to unmarshal your request body into. Use a pointer.
+	Body interface{}
+	// Unmarshalers is the list the available Unmarshalers by content-type.
+	Unmarshalers map[string]Unmarshaler
+	// DefaultContentType is the default content-type if the request don't have any.
 	DefaultContentType string
-	SkipValidation     bool
+	// SkipValidation indicates whether you want to skip body validation or not.
+	SkipValidation bool
 }
 
-// BodyValidation interface can be implemented to trigger an auto validation by BodyUnmarshaler PreProcess
+// BodyValidation interface can be implemented to trigger an auto validation by BodyUnmarshaler middleware.
 type BodyValidation interface {
 	Validate() error
 }

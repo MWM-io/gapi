@@ -8,7 +8,10 @@ import (
 	"github.com/mwm-io/gapi/server"
 )
 
-// Log is a pre-processor that will set the request parameters into the Parameters field.
+// Log is a middleware that will:
+// - populate the logger context with the request logger
+// - set the given logger into the request's context.
+// - log any error returned by the next handler
 type Log struct {
 	Logger *gLog.Logger
 }

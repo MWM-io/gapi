@@ -22,17 +22,23 @@ type Marshaler interface {
 	Marshal(v interface{}) ([]byte, error)
 }
 
+// MarshalerFunc is function type that implements Marshaler interface.
 type MarshalerFunc func(v interface{}) ([]byte, error)
 
+// Marshal implements the Marshaler interface.
 func (f MarshalerFunc) Marshal(v interface{}) ([]byte, error) {
 	return f(v)
 }
 
-// ResponseWriterMiddleware /
+// ResponseWriterMiddleware is a middleware that will take the response from the next handler
+// and write it into the response.
+// It will choose the content type based on the request Accept header.
 type ResponseWriterMiddleware struct {
-	Marshalers         map[string]Marshaler
+	// Marshalers is the list of available Marshaler by content type.
+	Marshalers map[string]Marshaler
+	// DefaultContentType is the defaut content-type if the request don't have any.
 	DefaultContentType string
-	// Response is only use for the openAPI documentation
+	// Response is only use for the openAPI documentation to indicates the response type.
 	Response interface{}
 }
 
@@ -156,8 +162,7 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 	return wantedType, marshaler, nil
 }
 
-// ResponseWriter This ResponseWriter is used to store the statusCode
-// and the content written to the http.ResponseWriter.
+// ResponseWriter is used to store the statusCode and the content written to the http.ResponseWriter.
 type ResponseWriter struct {
 	http.ResponseWriter
 	statusCode int

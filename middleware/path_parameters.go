@@ -13,7 +13,7 @@ import (
 	"github.com/mwm-io/gapi/server/openapi"
 )
 
-// PathParameters is a pre-processor that will set the request parameters into the Parameters field.
+// PathParameters is a middleware that will set the request path parameters into the Parameters field.
 type PathParameters struct {
 	Parameters interface{}
 }
