@@ -14,3 +14,21 @@ type StackTrace interface {
 	Frames() []runtime.Frame
 	Last() (runtime.Frame, bool)
 }
+
+// EmptyStackTrace is an empty stacktrace.
+type EmptyStackTrace struct{}
+
+// String implements StackTrace interface.
+func (e EmptyStackTrace) String() string {
+	return ""
+}
+
+// Frames implements StackTrace interface.
+func (e EmptyStackTrace) Frames() []runtime.Frame {
+	return nil
+}
+
+// Last implements StackTrace interface.
+func (e EmptyStackTrace) Last() (runtime.Frame, bool) {
+	return runtime.Frame{}, false
+}

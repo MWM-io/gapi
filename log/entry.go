@@ -49,8 +49,9 @@ type Entry struct {
 // NewEntry builds a new Entry.
 func NewEntry(msg string) Entry {
 	return Entry{
-		Message: msg,
-		Context: context.Background(),
+		Message:    msg,
+		Context:    context.Background(),
+		StackTrace: EmptyStackTrace{},
 	}
 }
 
