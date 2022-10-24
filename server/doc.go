@@ -5,8 +5,6 @@ as well as a Middleware type to allow middleware for this new Handler type.
 
 You can see middleware implementation in the github.com/mwm-io/gapi/middleware package.
 
-
-```go
 	import (
 		"http"
 		"log"
@@ -25,7 +23,6 @@ You can see middleware implementation in the github.com/mwm-io/gapi/middleware p
 	if err != nil {
 		log.Fatal(err)
 	}
-```
 
 */
 package server

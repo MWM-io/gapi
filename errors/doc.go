@@ -21,17 +21,15 @@ To create a new error, simply call the Err() function and use the setter to set 
 
 The setter functions will modify the data and won't create a new error, you don't need to reassign the error.
 
-```go
-import (
-	"net/http"
-	"github.com/mwm-io/gapi/errors"
-)
+	import (
+		"net/http"
+		"github.com/mwm-io/gapi/errors"
+	)
 
-err := errors.Err("my error).
-	WithKind("not_found").
-	WithStatusCode(http.StatusNotFound).
-	WithMessage("not found")
-```
+	err := errors.Err("my error).
+		WithKind("not_found").
+		WithStatusCode(http.StatusNotFound).
+		WithMessage("not found")
 
 ## Wrap an existing error
 
@@ -39,15 +37,13 @@ To wrap an existing error, simply call the Wrap() function. You can then modify 
 
 Wrapping a nil error will return a nil value.
 
-```go
-import (
-	"fmt"
-	"github.com/mwm-io/gapi/errors"
-)
+	import (
+		"fmt"
+		"github.com/mwm-io/gapi/errors"
+	)
 
-err := fmt.Errorf("source error")
-newErr := errors.Wrap(err, "error").WithKind("new_kind")
-```
+	err := fmt.Errorf("source error")
+	newErr := errors.Wrap(err, "error").WithKind("new_kind")
 
 ### Populate data from the source error
 
@@ -60,24 +56,22 @@ Your builder should concerned a single type of error.
 
 You can read an example with the errors/google package.
 
-```go
-import (
-	"github.com/mwm-io/gapi/errors"
-)
+	import (
+		"github.com/mwm-io/gapi/errors"
+	)
 
-func init() {
-	errors.AddBuilder()
-}
-
-var GrpcCodeErrorBuilder = errors.ErrorBuilderFunc(func(err errors.Error, sourceError error) errors.Error {
-	sourceErrI, ok := sourceErr.(interface{ WithKind() string })
-	if !ok {
-		return err
+	func init() {
+		errors.AddBuilder()
 	}
 
-	return err.WithKind(sourceErrI.WithKind())
-})
-```
+	var GrpcCodeErrorBuilder = errors.ErrorBuilderFunc(func(err errors.Error, sourceError error) errors.Error {
+		sourceErrI, ok := sourceErr.(interface{ WithKind() string })
+		if !ok {
+			return err
+		}
+
+		return err.WithKind(sourceErrI.WithKind())
+	})
 
 ## Why is it an interface ?
 
