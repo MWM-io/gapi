@@ -30,12 +30,12 @@ func NewOperationBuilder(reflector *openapi3.Reflector, method, path string) *Op
 }
 
 // Operation return the openapi3.Operation used to compute doc for current operation
-func (b OperationBuilder) Operation() *openapi3.Operation {
+func (b *OperationBuilder) Operation() *openapi3.Operation {
 	return b.operation
 }
 
 // Reflector return the openapi3.Reflector used to compute doc for current operation
-func (b OperationBuilder) Reflector() *openapi3.Reflector {
+func (b *OperationBuilder) Reflector() *openapi3.Reflector {
 	return b.reflector
 }
 
@@ -54,7 +54,7 @@ func (b *OperationBuilder) Error() error {
 		return nil
 	}
 
-	var err errors.Error
+	var err error
 	for _, item := range b.err {
 		err = errors.Wrap(err, fmt.Sprintf("%+v", item))
 	}
@@ -86,8 +86,8 @@ func (b *OperationBuilder) WithTags(tags ...string) *OperationBuilder {
 // - WithExample to add example(s) as body
 // TODO: Find a way to support non json body like CSV, files, multi part, url encoded ...
 func (b *OperationBuilder) WithBody(body interface{}, options ...BuilderOption) *OperationBuilder {
-	var c config
-	c.applyOptions(options)
+	var c builderOptions
+	c.applyOptions(options...)
 
 	err := b.reflector.SetRequest(b.operation, body, b.httpMethod)
 	if err != nil {
@@ -125,8 +125,8 @@ func (b *OperationBuilder) WithBodyExample(value interface{}) *OperationBuilder 
 }
 
 // WithParams configure path and query parameters to the operation
-// To set path parameters use a struct with path tag
-// To set query parameters use a struct with query tag
+// To set path parameters use a struct with 'path' tag
+// To set query parameters use a struct with 'query' tag
 func (b *OperationBuilder) WithParams(body interface{}) *OperationBuilder {
 	if err := b.reflector.SetRequest(b.operation, body, b.httpMethod); err != nil {
 		b.err = append(b.err, err)
@@ -142,7 +142,7 @@ func (b *OperationBuilder) WithParams(body interface{}) *OperationBuilder {
 // - WithMimeType to set a custom contentType (default to json)
 // - WithStatusCode to set a specific status code. Default value are 204 for nil value and 200 for non nil value
 func (b *OperationBuilder) WithResponse(output interface{}, options ...BuilderOption) *OperationBuilder {
-	c := config{
+	c := builderOptions{
 		description: "",
 		examples:    nil,
 		mimeType:    "application/json",
@@ -153,7 +153,7 @@ func (b *OperationBuilder) WithResponse(output interface{}, options ...BuilderOp
 		c.statusCode = 204
 	}
 
-	c.applyOptions(options)
+	c.applyOptions(options...)
 
 	err := b.reflector.SetupResponse(openapi3.OperationContext{
 		Operation:         b.operation,

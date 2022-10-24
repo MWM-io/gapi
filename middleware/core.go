@@ -53,6 +53,7 @@ func Core(opts ...CoreOption) server.MiddlewareHandler {
 	)
 }
 
+// CoreConfig contains all the configuration for the core.
 type CoreConfig struct {
 	Tracing           Tracing
 	LogResponseWriter Log
@@ -64,44 +65,52 @@ type CoreConfig struct {
 	BodyUnmarshaler   BodyUnmarshaler
 }
 
+// CoreOption is a function that is able to modify the CoreConfig.
 type CoreOption func(*CoreConfig)
 
+// WithTracing adds tracing configuration.
 func WithTracing(tracing Tracing) CoreOption {
 	return func(config *CoreConfig) {
 		config.Tracing = tracing
 	}
 }
 
+// WithLog adds logging configuration.
 func WithLog(log Log) CoreOption {
 	return func(config *CoreConfig) {
 		config.Log = log
 	}
 }
 
+// WithLogResponseWriter adds logging configuration for the response writer..
 func WithLogResponseWriter(log Log) CoreOption {
 	return func(config *CoreConfig) {
 		config.LogResponseWriter = log
 	}
 }
 
+// WithResponseType specify the response type. (for the documentation)
 func WithResponseType(response interface{}) CoreOption {
 	return func(config *CoreConfig) {
 		config.ResponseWriter.Response = response
 	}
 }
 
+// WithResponseMarshaler adds a new response marshaler.
 func WithResponseMarshaler(contentType string, marshaler Marshaler) CoreOption {
 	return func(config *CoreConfig) {
 		config.ResponseWriter.Marshalers[contentType] = marshaler
 	}
 }
 
+// WithBodyUnmarshaler adds a new body unmarshaler.
 func WithBodyUnmarshaler(contentType string, unmarshaler Unmarshaler) CoreOption {
 	return func(config *CoreConfig) {
 		config.BodyUnmarshaler.Unmarshalers[contentType] = unmarshaler
 	}
 }
 
+// WithDefaultContentType sets the default content type. (for both the request and the response)
 func WithDefaultContentType(contentType string) CoreOption {
 	return func(config *CoreConfig) {
 		config.ResponseWriter.DefaultContentType = contentType
@@ -109,24 +118,28 @@ func WithDefaultContentType(contentType string) CoreOption {
 	}
 }
 
+// WithPathParameters set the request parameters to populate.
 func WithPathParameters(params interface{}) CoreOption {
 	return func(config *CoreConfig) {
 		config.PathParameters.Parameters = params
 	}
 }
 
+// WithQueryParameters set the query parameters to populate.
 func WithQueryParameters(params interface{}) CoreOption {
 	return func(config *CoreConfig) {
 		config.QueryParameters.Parameters = params
 	}
 }
 
+// WithBody set the body to unmarshal the request's body in.
 func WithBody(body interface{}) CoreOption {
 	return func(config *CoreConfig) {
 		config.BodyUnmarshaler.Body = body
 	}
 }
 
+// WithSkipBodyValidation indicates if we should skip body validation.
 func WithSkipBodyValidation(skip bool) CoreOption {
 	return func(config *CoreConfig) {
 		config.BodyUnmarshaler.SkipValidation = skip

@@ -2,9 +2,13 @@ package server
 
 import (
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
-// Handler is able to respond to a http request
+// Handler is able to respond to a http request and return the response it wants to write and an error.
+// You need to use a middleware to write your response if you just return your response and not write it.
+// (see github.com/mwm-io/gapi/middlewares.BodyUnmarshaler)
 type Handler interface {
 	Serve(http.ResponseWriter, *http.Request) (interface{}, error)
 }
@@ -18,6 +22,13 @@ type HandlerFunc func(http.ResponseWriter, *http.Request) (interface{}, error)
 // Serve implements the Handler interface.
 func (h HandlerFunc) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return h(w, r)
+}
+
+// AddHandler add a new handler to the given mux router on a given method and path.
+func AddHandler(router *mux.Router, method, path string, f Handler) {
+	router.Methods(method).
+		Path(path).
+		Handler(HttpHandler{f})
 }
 
 // HttpHandler is a wrapper of Handler that implements the http.Handler interface.

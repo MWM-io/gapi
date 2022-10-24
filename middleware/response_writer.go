@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -21,17 +22,23 @@ type Marshaler interface {
 	Marshal(v interface{}) ([]byte, error)
 }
 
+// MarshalerFunc is function type that implements Marshaler interface.
 type MarshalerFunc func(v interface{}) ([]byte, error)
 
+// Marshal implements the Marshaler interface.
 func (f MarshalerFunc) Marshal(v interface{}) ([]byte, error) {
 	return f(v)
 }
 
-// ResponseWriterMiddleware /
+// ResponseWriterMiddleware is a middleware that will take the response from the next handler
+// and write it into the response.
+// It will choose the content type based on the request Accept header.
 type ResponseWriterMiddleware struct {
-	Marshalers         map[string]Marshaler
+	// Marshalers is the list of available Marshaler by content type.
+	Marshalers map[string]Marshaler
+	// DefaultContentType is the defaut content-type if the request don't have any.
 	DefaultContentType string
-	// Response is only use for the openAPI documentation
+	// Response is only use for the openAPI documentation to indicates the response type.
 	Response interface{}
 }
 
@@ -140,7 +147,7 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 
 	wantedType, _, errAccept := mime.ParseMediaType(accept)
 	if errAccept != nil {
-		return "", nil, errors.Wrap(errAccept, "unknown content-type", errors.StatusCodeOpt(http.StatusBadRequest))
+		return "", nil, errors.Wrap(errAccept, fmt.Sprintf("unknown content-type %s", accept)).WithStatus(http.StatusBadRequest)
 	}
 
 	if wantedType == "" || wantedType == "*/*" {
@@ -149,14 +156,13 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 
 	marshaler, ok := m.Marshalers[wantedType]
 	if !ok || marshaler == nil {
-		return "", nil, errors.Wrap(errAccept, "unsupported content-type", errors.StatusCodeOpt(http.StatusBadRequest))
+		return "", nil, errors.Err(fmt.Sprintf("unsupported content-type %s", wantedType)).WithStatus(http.StatusBadRequest)
 	}
 
 	return wantedType, marshaler, nil
 }
 
-// ResponseWriter This ResponseWriter is used to store the statusCode
-// and the content written to the http.ResponseWriter.
+// ResponseWriter is used to store the statusCode and the content written to the http.ResponseWriter.
 type ResponseWriter struct {
 	http.ResponseWriter
 	statusCode int

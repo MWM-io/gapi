@@ -12,6 +12,7 @@ type RapiDocHandler struct {
 	auth           Authorization
 }
 
+// NewRapiDocHandler build a new RapiDocHandler.
 func NewRapiDocHandler(openAPIJsonURL string, auth Authorization) *RapiDocHandler {
 	return &RapiDocHandler{
 		openAPIJsonURL: openAPIJsonURL,

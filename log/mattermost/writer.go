@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"runtime"
 	"time"
 
 	"github.com/mwm-io/gapi/log"
@@ -123,14 +122,8 @@ func DefaultFormatter(entry log.Entry) string {
 	}
 
 	var stackTraceStr string
-	frames := runtime.CallersFrames(entry.StackTrace)
-	for {
-		frame, more := frames.Next()
-
+	for _, frame := range entry.StackTrace.Frames() {
 		stackTraceStr = fmt.Sprintf("%s1. File: %s, Function: %s, Line: %s", stackTraceStr, frame.File, frame.Function, frame.Line)
-		if !more {
-			break
-		}
 	}
 
 	return fmt.Sprintf(`

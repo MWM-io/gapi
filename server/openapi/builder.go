@@ -7,8 +7,8 @@ import (
 	"github.com/mwm-io/gapi/server"
 )
 
-// PopulateReflector return a new populated openapi3.Reflector
-// with operations built from the router.
+// PopulateReflector will add all the router routes into the given openapi3.Reflector
+// You can add ignoredPath to ignore some of the registered routes.
 func PopulateReflector(reflector *openapi3.Reflector, r *mux.Router, ignoredPaths []string) error {
 	return r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		path, errPath := route.GetPathTemplate()

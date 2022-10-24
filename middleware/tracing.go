@@ -9,8 +9,9 @@ import (
 	"github.com/mwm-io/gapi/server"
 )
 
-// Tracing will add tracing information
+// Tracing will add tracing information to the request context using opencensus..
 type Tracing struct {
+	// Propagation is the propagation format (how to read incoming trace information in the request).
 	Propagation      propagation.HTTPFormat
 	IsPublicEndpoint bool
 }

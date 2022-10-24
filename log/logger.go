@@ -20,14 +20,12 @@ func NewLogger(w EntryWriter, options ...EntryOption) *Logger {
 
 // NewDefaultLogger creates a new logger with the default stack of entry options:
 // - timestamp set to time.Now()
-// - stacktrace
 // - tracing information from context (either opencensus or telemetry)
-// If you don't need theses options, or just need some, you should use NewLogger and chose only the option you need.
+// If you don't need theses options, or just need some, you should use NewLogger and chose only the options you need.
 func NewDefaultLogger(w EntryWriter) *Logger {
 	return NewLogger(
 		w,
 		TimestampNowOpt(),
-		DefaultStackTraceOpt(),
 		OpencensusTraceOpt(),
 		OpentelemetryTraceOpt(),
 	)
@@ -35,40 +33,22 @@ func NewDefaultLogger(w EntryWriter) *Logger {
 
 // Log logs a message with additional EntryOptions.
 func (l *Logger) Log(msg string, options ...EntryOption) {
-	l.LogC(context.Background(), msg, options...)
-}
-
-// LogC logs a message with a context.Context and additional EntryOptions.
-func (l *Logger) LogC(ctx context.Context, msg string, options ...EntryOption) {
-	entry := Entry{Message: msg}
-	for _, option := range options {
-		option(ctx, &entry)
-	}
-
-	l.LogEntryC(ctx, entry)
+	l.
+		WithOptions(options...).
+		LogEntry(NewEntry(msg))
 }
 
 // LogAny logs interface{}thing, converting the given value into an entry.
-func (l *Logger) LogAny(v interface{}) {
-	l.LogAnyC(context.Background(), v)
-}
-
-// LogAnyC logs interface{}thing with a context, converting the given value into an entry.
-func (l *Logger) LogAnyC(ctx context.Context, v interface{}) {
-	l.LogEntryC(ctx, NewEntry(v))
+func (l *Logger) LogAny(v interface{}, options ...EntryOption) {
+	l.
+		WithOptions(options...).
+		WithOptions(AnyOpt(v)).
+		LogEntry(NewEntry(""))
 }
 
 // LogEntry logs an entry.
 func (l *Logger) LogEntry(entry Entry) {
-	l.LogEntryC(context.Background(), entry)
-}
-
-// LogEntryC logs an entry with a context.
-// It will set the default data using the logger's options and then write it.
-func (l *Logger) LogEntryC(ctx context.Context, entry Entry) {
-	for _, option := range l.options {
-		option(ctx, &entry)
-	}
+	MultiOpt(l.options...)(&entry)
 
 	l.w.WriteEntry(entry)
 }
@@ -96,72 +76,42 @@ func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
 	return l.WithOptions(FieldsOpt(fields))
 }
 
+// WithContext returns a new logger with a new context.
+func (l *Logger) WithContext(ctx context.Context) *Logger {
+	return l.WithOptions(ContextOpt(ctx))
+}
+
 // Emergency logs an emergency message with additional EntryOptions.
 func (l *Logger) Emergency(msg string, options ...EntryOption) {
-	l.WithSeverity(EmergencySeverity).LogC(context.Background(), msg, options...)
+	l.WithSeverity(EmergencySeverity).Log(msg, options...)
 }
 
 // Alert logs an alert message with additional EntryOptions.
 func (l *Logger) Alert(msg string, options ...EntryOption) {
-	l.WithSeverity(AlertSeverity).LogC(context.Background(), msg, options...)
+	l.WithSeverity(AlertSeverity).Log(msg, options...)
 }
 
 // Critical logs a critical message with additional EntryOptions.
 func (l *Logger) Critical(msg string, options ...EntryOption) {
-	l.WithSeverity(CriticalSeverity).LogC(context.Background(), msg, options...)
+	l.WithSeverity(CriticalSeverity).Log(msg, options...)
 }
 
 // Error logs an error message with additional EntryOptions.
 func (l *Logger) Error(msg string, options ...EntryOption) {
-	l.WithSeverity(ErrorSeverity).LogC(context.Background(), msg, options...)
+	l.WithSeverity(ErrorSeverity).Log(msg, options...)
 }
 
 // Warn logs a warning message with additional EntryOptions.
 func (l *Logger) Warn(msg string, options ...EntryOption) {
-	l.WithSeverity(WarnSeverity).LogC(context.Background(), msg, options...)
+	l.WithSeverity(WarnSeverity).Log(msg, options...)
 }
 
 // Info logs an info message with additional EntryOptions.
 func (l *Logger) Info(msg string, options ...EntryOption) {
-	l.WithSeverity(InfoSeverity).LogC(context.Background(), msg, options...)
+	l.WithSeverity(InfoSeverity).Log(msg, options...)
 }
 
 // Debug logs a debug message with additional EntryOptions.
 func (l *Logger) Debug(msg string, options ...EntryOption) {
-	l.WithSeverity(DebugSeverity).LogC(context.Background(), msg, options...)
-}
-
-// EmergencyC logs an emergency message with a context and additional EntryOptions.
-func (l *Logger) EmergencyC(ctx context.Context, msg string, options ...EntryOption) {
-	l.WithSeverity(EmergencySeverity).LogC(ctx, msg, options...)
-}
-
-// AlertC logs an alert message with a context and  additional EntryOptions.
-func (l *Logger) AlertC(ctx context.Context, msg string, options ...EntryOption) {
-	l.WithSeverity(AlertSeverity).LogC(ctx, msg, options...)
-}
-
-// CriticalC logs a critical message with a context and  additional EntryOptions.
-func (l *Logger) CriticalC(ctx context.Context, msg string, options ...EntryOption) {
-	l.WithSeverity(CriticalSeverity).LogC(ctx, msg, options...)
-}
-
-// ErrorC logs an error message with a context and  additional EntryOptions.
-func (l *Logger) ErrorC(ctx context.Context, msg string, options ...EntryOption) {
-	l.WithSeverity(ErrorSeverity).LogC(ctx, msg, options...)
-}
-
-// WarnC logs a warning message with a context and  additional EntryOptions.
-func (l *Logger) WarnC(ctx context.Context, msg string, options ...EntryOption) {
-	l.WithSeverity(WarnSeverity).LogC(ctx, msg, options...)
-}
-
-// InfoC logs an info message with a context and  additional EntryOptions.
-func (l *Logger) InfoC(ctx context.Context, msg string, options ...EntryOption) {
-	l.WithSeverity(InfoSeverity).LogC(ctx, msg, options...)
-}
-
-// DebugC logs a debug message with a context and  additional EntryOptions.
-func (l *Logger) DebugC(ctx context.Context, msg string, options ...EntryOption) {
-	l.WithSeverity(DebugSeverity).LogC(ctx, msg, options...)
+	l.WithSeverity(DebugSeverity).Log(msg, options...)
 }

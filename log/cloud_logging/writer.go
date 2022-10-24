@@ -1,6 +1,8 @@
 package cloud_logging
 
 import (
+	"fmt"
+
 	"github.com/mwm-io/gapi/log"
 
 	"cloud.google.com/go/logging"
@@ -9,13 +11,17 @@ import (
 
 // Writer implements the logger.EntryWriter interface
 type Writer struct {
-	logger *logging.Logger
+	logger    *logging.Logger
+	projectID string
 }
 
 // NewWriter return a new cloud logging logger.EntryWriter.
 // See cloud.google.com/go/logging.NewClient on how to create a new logging.Logger.
-func NewWriter(log *logging.Logger) *Writer {
-	return &Writer{logger: log}
+func NewWriter(log *logging.Logger, projectID string) *Writer {
+	return &Writer{
+		logger:    log,
+		projectID: projectID,
+	}
 }
 
 // WriteEntry implements the logger.EntryWriter interface
@@ -40,18 +46,18 @@ func (w *Writer) WriteEntry(entry log.Entry) {
 	}
 
 	if entry.TraceID != "" || entry.SpanID != "" {
-		loggingEntry.Trace = entry.TraceID
+		loggingEntry.Trace = fmt.Sprintf("projects/%s/traces/%s", w.projectID, entry.TraceID)
 		loggingEntry.SpanID = entry.SpanID
 		loggingEntry.TraceSampled = entry.IsTraceSampled
 	}
 
 	if entry.StackTrace != nil {
-		stackInfo := entry.GetLastStackInfo()
-
-		loggingEntry.SourceLocation = &logpb.LogEntrySourceLocation{
-			File:     stackInfo.File,
-			Function: stackInfo.Function,
-			Line:     int64(stackInfo.Line),
+		if stackInfo, ok := entry.StackTrace.Last(); ok {
+			loggingEntry.SourceLocation = &logpb.LogEntrySourceLocation{
+				File:     stackInfo.File,
+				Function: stackInfo.Function,
+				Line:     int64(stackInfo.Line),
+			}
 		}
 	}
 
