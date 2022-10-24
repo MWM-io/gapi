@@ -89,7 +89,7 @@ func (m BodyUnmarshaler) Doc(builder *openapi.OperationBuilder) error {
 		return nil
 	}
 
-	for contentType, _ := range m.Unmarshalers {
+	for contentType := range m.Unmarshalers {
 		builder.WithBody(m.Body, openapi.WithMimeType(contentType))
 	}
 

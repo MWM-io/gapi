@@ -72,7 +72,7 @@ func (m ResponseWriterMiddleware) Doc(builder *openapi.OperationBuilder) error {
 		return nil
 	}
 
-	for contentType, _ := range m.Marshalers {
+	for contentType := range m.Marshalers {
 		builder.WithResponse(m.Response, openapi.WithMimeType(contentType))
 	}
 
