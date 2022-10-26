@@ -27,3 +27,18 @@ func MiddlewareH(middlewares ...Middleware) MiddlewareHandler {
 		middlewares: middlewares,
 	}
 }
+
+// HandlerFuncWithMiddleware is a handlerFunc with Middlewares.
+// Use HandlerF to build a new one.
+type HandlerFuncWithMiddleware struct {
+	HandlerFunc
+	MiddlewareHandler
+}
+
+// HandlerF builds a new HandlerFunc with middlewares.
+func HandlerF(f HandlerFunc, middlewares ...Middleware) *HandlerFuncWithMiddleware {
+	return &HandlerFuncWithMiddleware{
+		HandlerFunc:       f,
+		MiddlewareHandler: MiddlewareH(middlewares...),
+	}
+}

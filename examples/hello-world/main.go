@@ -1,62 +1,67 @@
 package main
 
 import (
-	"context"
-	"log"
-	"os"
+	"encoding/xml"
+	"fmt"
+	"net/http"
 
-	"cloud.google.com/go/logging"
-	"github.com/mwm-io/gapi/server/openapi"
+	"github.com/mwm-io/gapi/errors"
+	"github.com/mwm-io/gapi/middleware"
 
 	gLog "github.com/mwm-io/gapi/log"
-	"github.com/mwm-io/gapi/log/cloud_logging"
 	"github.com/mwm-io/gapi/server"
-
-	"github.com/mwm-io/gapi/examples/hello-world/internal"
 )
 
 func main() {
-	ctx := context.Background()
-	clientLogger := setupLog(ctx)
-	defer clientLogger.Close()
-
 	r := server.NewMux()
 
-	server.AddHandler(r, "GET", "/json/hello", internal.JsonHelloWorldHandlerF())
-	server.AddHandler(r, "GET", "/xml/hello", internal.XmlHelloWorldHandlerF())
-	server.AddHandler(r, "GET", "/error/hello", internal.ErrorHelloWorldHandlerF())
+	// If you don't add any middlewares, handlers will work as native http handlers.
+	server.AddHandler(r, "GET", "/hello-world", server.HandlerF(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		w.Write([]byte("hello-world"))
+		return nil, nil
+	}))
 
-	server.AddHandler(r, "POST", "/process/hello/{id}", internal.ProcessHandlerF())
+	// You can add middlewares to use the returned values (interface{}, error) to return your response.
+	server.AddHandler(r, "GET", "/hello-world-1", server.HandlerF(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		return "hello-world", nil
+	}, middleware.ResponseWriterMiddleware{
+		Marshalers: map[string]middleware.Marshaler{"text/plain": middleware.MarshalerFunc(func(v interface{}) ([]byte, error) {
+			return []byte(fmt.Sprintf("%#v", v)), nil
+		})},
+		DefaultContentType: "text/plain",
+		Response:           "response",
+	}))
 
-	err := openapi.AddRapidocHandlers(r, openapi.Config{})
-	if err != nil {
-		log.Printf("error while adding rapidoc %+v\n", err)
-	}
+	// Use the core to add all basic middlewares needed, with a predefined configuration.
+	server.AddHandler(r, "GET", "/hello-world-core", server.HandlerF(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		return "hello-world", nil
+	}, middleware.Core().Middlewares()...))
+
+	// You can also return an object, that will be serialized by the response_writer middleware.
+	server.AddHandler(r, "GET", "/hello-world-serialized", server.HandlerF(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		return struct {
+			XMLName xml.Name `xml:"response"`
+			Title   string   `xml:"title" json:"title"`
+		}{Title: "hello-world"}, nil
+	}, middleware.Core().Middlewares()...))
+
+	// You can also add option to custom the core's middlewares. Here we will always return a json response.
+	server.AddHandler(r, "GET", "/hello-world-json", server.HandlerF(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		return struct {
+			Title string `json:"title"`
+		}{Title: "hello-world"}, nil
+	}, middleware.Core(middleware.WithForcedContentType("application/json")).Middlewares()...))
+
+	// The response write in the core will also read and return the returned error.
+	server.AddHandler(r, "GET", "/hello-world-error", server.HandlerF(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		return nil, errors.Err("my error")
+	}, middleware.Core().Middlewares()...))
 
 	gLog.Info("Starting http server")
 
-	if err := server.ServeAndHandleShutdown(r, server.WithContext(ctx)); err != nil {
+	if err := server.ServeAndHandleShutdown(r); err != nil {
 		gLog.LogAny(err)
 	}
 
 	gLog.Info("Server stopped")
-}
-
-func setupLog(ctx context.Context) *logging.Client {
-	client, err := logging.NewClient(ctx, os.Getenv("GOOGLE_CLOUD_PROJECT"))
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	log := gLog.NewDefaultLogger(
-		gLog.NewMultiWriter(
-			gLog.NewFilterWriter(gLog.InfoSeverity, cloud_logging.NewWriter(client.Logger("application"))),
-			gLog.NewWriter(gLog.JSONEntryMarshaler, os.Stdout),
-		),
-	)
-
-	log = log.WithLabels(map[string]string{"PROJECT_ID": os.Getenv("GOOGLE_CLOUD_PROJECT")})
-	gLog.SetGlobalLogger(log)
-
-	return client
 }

@@ -118,6 +118,13 @@ func WithDefaultContentType(contentType string) CoreOption {
 	}
 }
 
+// WithForcedContentType sets the content type that will always be returned with the response.
+func WithForcedContentType(contentType string) CoreOption {
+	return func(config *CoreConfig) {
+		config.ResponseWriter.ForcedContentType = contentType
+	}
+}
+
 // WithPathParameters set the request parameters to populate.
 func WithPathParameters(params interface{}) CoreOption {
 	return func(config *CoreConfig) {

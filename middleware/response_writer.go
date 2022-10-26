@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/server"
 	"github.com/mwm-io/gapi/server/openapi"
+
+	"github.com/elnormous/contenttype"
 )
 
 // WithStatusCode is able to return its http status code.
@@ -36,8 +37,10 @@ func (f MarshalerFunc) Marshal(v interface{}) ([]byte, error) {
 type ResponseWriterMiddleware struct {
 	// Marshalers is the list of available Marshaler by content type.
 	Marshalers map[string]Marshaler
-	// DefaultContentType is the defaut content-type if the request don't have any.
+	// DefaultContentType is the default content-type if the request don't have any.
 	DefaultContentType string
+	// ForcedContentType will always return a response serialized with this content-type.
+	ForcedContentType string
 	// Response is only use for the openAPI documentation to indicates the response type.
 	Response interface{}
 }
@@ -140,26 +143,35 @@ func (m ResponseWriterMiddleware) writeResponse(w http.ResponseWriter, r *http.R
 }
 
 func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, Marshaler, error) {
-	accept := r.Header.Get("Accept")
-	if accept == "" {
-		accept = m.DefaultContentType
+	if m.ForcedContentType != "" {
+		marshaler, ok := m.Marshalers[m.ForcedContentType]
+		if !ok {
+			return "", nil, errors.Err(fmt.Sprintf("no content marshaler found for content type %s", m.ForcedContentType))
+		}
+
+		return m.ForcedContentType, marshaler, nil
 	}
 
-	wantedType, _, errAccept := mime.ParseMediaType(accept)
-	if errAccept != nil {
-		return "", nil, errors.Wrap(errAccept, fmt.Sprintf("unknown content-type %s", accept)).WithStatus(http.StatusBadRequest)
+	var availableTypes []contenttype.MediaType
+	for mediaType := range m.Marshalers {
+		parsedMediaType, err := contenttype.ParseMediaType(mediaType)
+		if err != nil {
+			return "", nil, errors.Wrap(err, fmt.Sprintf("invalid mediaType %s", mediaType)).WithStatus(http.StatusInternalServerError)
+		}
+		availableTypes = append(availableTypes, parsedMediaType)
 	}
 
-	if wantedType == "" || wantedType == "*/*" {
-		wantedType = m.DefaultContentType
+	accepted, _, err := contenttype.GetAcceptableMediaType(r, availableTypes)
+	if err != nil {
+		return "", nil, errors.Wrap(err, fmt.Sprintf("no content-type found to match the accept header %s", r.Header.Get("Accept"))).WithStatus(http.StatusUnsupportedMediaType)
 	}
 
-	marshaler, ok := m.Marshalers[wantedType]
-	if !ok || marshaler == nil {
-		return "", nil, errors.Err(fmt.Sprintf("unsupported content-type %s", wantedType)).WithStatus(http.StatusBadRequest)
+	marshaler, ok := m.Marshalers[accepted.String()]
+	if !ok {
+		return "", nil, errors.Err(fmt.Sprintf("no content marshaler found for content type %s", accepted.String()))
 	}
 
-	return wantedType, marshaler, nil
+	return accepted.String(), marshaler, nil
 }
 
 // ResponseWriter is used to store the statusCode and the content written to the http.ResponseWriter.

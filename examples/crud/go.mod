@@ -1,4 +1,4 @@
-module github.com/mwm-io/gapi/examples/hello-world
+module github.com/mwm-io/gapi/examples/crud
 
 go 1.16
 
