@@ -4,75 +4,93 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/mwm-io/gapi/handler"
+	"github.com/mwm-io/gapi/middleware"
+	"github.com/mwm-io/gapi/openapi"
 )
 
-// Handler is able to respond to a http request and return the response it wants to write and an error.
-// You need to use a middleware to write your response if you just return your response and not write it.
-// (see github.com/mwm-io/gapi/middlewares.BodyUnmarshaler)
-type Handler interface {
-	Serve(http.ResponseWriter, *http.Request) (interface{}, error)
-}
-
-// HandlerFunc type is an adapter to allow the use of
-// ordinary functions as HTTP handlers. If f is a function
-// with the appropriate signature, HandlerFunc(f) is a
-// Handler that calls f.
-type HandlerFunc func(http.ResponseWriter, *http.Request) (interface{}, error)
-
-// Serve implements the Handler interface.
-func (h HandlerFunc) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return h(w, r)
-}
-
-// AddHandler add a new handler to the given mux router on a given method and path.
-func AddHandler(router *mux.Router, method, path string, f Handler) {
+// AddHandlerFactory register a new handler factory to the given mux router on a given method and path.
+// You can use it if you want a new instance of your handler for each call.
+// It must be use useful if :
+//
+//  - you use a middleware for handle request params like middleware.BodyDecoder, middleware.PathParameters, etc.
+//  - you store properties in your handler struct during Serve process
+func AddHandlerFactory(router *mux.Router, method, path string, f handler.Factory) {
 	router.Methods(method).
 		Path(path).
-		Handler(HttpHandler{f})
+		Handler(defaultHandleEngine{
+			getHandler: f,
+		})
 }
 
-// HttpHandler is a wrapper of Handler that implements the http.Handler interface.
-type HttpHandler struct {
-	Handler
+// AddHandler register a new handler to the given mux router on a given method and path.
+func AddHandler(router *mux.Router, method, path string, f handler.Handler) {
+	router.Methods(method).
+		Path(path).
+		Handler(defaultHandleEngine{
+			getHandler: func() handler.Handler {
+				return f
+			},
+		})
 }
 
-// ServeHTTP implements the http.Handler interface.
-// It will try to find the first Handler in the chain that implements the MiddlewareAware interface to add the middlewares.
-func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler := h.Handler
+type defaultHandleEngine struct {
+	getHandler func() handler.Handler
+}
 
-	middlewares := h.Middlewares()
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		handler = middlewares[i].Wrap(handler)
+func (e defaultHandleEngine) getMiddlewareList(h handler.Handler) []handler.Middleware {
+	middlewareList := make([]handler.Middleware, len(middleware.Defaults))
+	copy(middlewareList, middleware.Defaults)
+
+	// if current handler have custom middlewares, add them to the list
+	if middlewareHandler, ok := h.(handler.MiddlewareAware); ok {
+		middlewareList = append(middlewareList, middlewareHandler.Middlewares()...)
 	}
 
-	_, _ = handler.Serve(w, r)
+	return middlewareList
 }
 
-// Middlewares implements the MiddlewareAware interface.
-func (h HttpHandler) Middlewares() []Middleware {
-	middlewareHandler, ok := h.Handler.(MiddlewareAware)
-	if !ok {
-		return nil
+// ServeHTTP is the function called by mux when a request is handled
+func (e defaultHandleEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// get handler to serve
+	h := e.getHandler()
+
+	// get middleware list for this handler
+	middlewareList := e.getMiddlewareList(h)
+
+	// Execute all middleware with list order
+	for i := len(middlewareList) - 1; i >= 0; i-- {
+		h = middlewareList[i].Wrap(h)
 	}
 
-	return middlewareHandler.Middlewares()
+	// Ignore response & error : must be handle by response writer middleware
+	_, _ = h.Serve(w, r)
 }
 
-// HandlerFactory is a function that return a new Handler
-// It is useful if you want to create a Handler that will carry request-scoped data.
-type HandlerFactory func() Handler
+// Doc is the function called by openapi during doc generation
+func (e defaultHandleEngine) Doc(builder *openapi.DocBuilder) error {
+	// get handler to serve
+	h := e.getHandler()
 
-// Serve implements the Handler interface
-func (h HandlerFactory) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	handler := h()
+	// get middleware list for this handler
+	middlewareList := e.getMiddlewareList(h)
 
-	if middlewareHandler, ok := handler.(MiddlewareAware); ok {
-		middlewares := middlewareHandler.Middlewares()
-		for i := len(middlewares) - 1; i >= 0; i-- {
-			handler = middlewares[i].Wrap(handler)
+	// Execute all middleware Doc func (if exist) with list order
+	for i := len(middlewareList) - 1; i >= 0; i-- {
+		documentedMiddleware, ok := middlewareList[i].(openapi.Documented)
+		if !ok {
+			continue
+		}
+
+		if err := documentedMiddleware.Doc(builder); err != nil {
+			return err
 		}
 	}
 
-	return handler.Serve(w, r)
+	// Execute handler Doc func (if exist)
+	if documentedHandler, ok := h.(openapi.Documented); ok {
+		return documentedHandler.Doc(builder)
+	}
+
+	return nil
 }

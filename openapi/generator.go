@@ -2,13 +2,12 @@ package openapi
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/mwm-io/gapi/handler"
 	"github.com/swaggest/openapi-go/openapi3"
-
-	"github.com/mwm-io/gapi/server"
 )
 
 // PopulateReflector will add all the router routes into the given openapi3.Reflector
-// You can add ignoredPath to ignore some of the registered routes.
+// You can add ignoredPath to ignore some registered routes.
 func PopulateReflector(reflector *openapi3.Reflector, r *mux.Router, ignoredPaths []string) error {
 	return r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		path, errPath := route.GetPathTemplate()
@@ -37,21 +36,15 @@ func PopulateReflector(reflector *openapi3.Reflector, r *mux.Router, ignoredPath
 	})
 }
 
-// BuildOperation adds the given handler to the openapi3.Reflector
-func BuildOperation(reflector *openapi3.Reflector, handler interface{}, method, path string) error {
-	if httpHandler, ok := handler.(server.HttpHandler); ok {
-		return BuildOperation(reflector, httpHandler.Handler, method, path)
-	}
+// BuildOperation adds the given h to the openapi3.Reflector
+func BuildOperation(reflector *openapi3.Reflector, h interface{}, method, path string) error {
+	docBuilder := NewDocBuilder(reflector, method, path)
 
-	if handlerFactory, ok := handler.(server.HandlerFactory); ok {
-		return BuildOperation(reflector, handlerFactory(), method, path)
-	}
+	if handlerWithMiddlewares, ok := h.(handler.MiddlewareAware); ok {
+		middlewareList := handlerWithMiddlewares.Middlewares()
 
-	docBuilder := NewOperationBuilder(reflector, method, path)
-
-	if handlerWithMiddlewares, ok := handler.(server.MiddlewareAware); ok {
-		for _, middleware := range handlerWithMiddlewares.Middlewares() {
-			if middlewareWithDoc, ok := middleware.(OperationDescriptor); ok {
+		for _, middleware := range middlewareList {
+			if middlewareWithDoc, isDocumented := middleware.(Documented); isDocumented {
 				if err := middlewareWithDoc.Doc(docBuilder); err != nil {
 					return err
 				}
@@ -59,13 +52,11 @@ func BuildOperation(reflector *openapi3.Reflector, handler interface{}, method, 
 		}
 	}
 
-	if handlerDoc, ok := handler.(OperationDescriptor); ok {
+	if handlerDoc, ok := h.(Documented); ok {
 		if err := handlerDoc.Doc(docBuilder); err != nil {
 			return err
 		}
 	}
 
-	return docBuilder.
-		Commit().
-		Error()
+	return nil
 }

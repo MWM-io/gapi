@@ -3,29 +3,32 @@ package internal
 import (
 	"net/http"
 
+	"github.com/mwm-io/gapi/handler"
 	"github.com/mwm-io/gapi/middleware"
-	"github.com/mwm-io/gapi/server"
+	"github.com/mwm-io/gapi/openapi"
 )
 
 type GetHandler struct {
-	server.MiddlewareHandler
+	handler.WithMiddlewares
 
 	pathParameters struct {
 		ID int `path:"id"`
 	}
 }
 
-func GetHandlerF() server.HandlerFactory {
-	return func() server.Handler {
-		h := &GetHandler{}
+func (h GetHandler) Doc(builder *openapi.DocBuilder) error {
+	builder.WithResponse(User{})
+	return nil
+}
 
-		h.MiddlewareHandler = middleware.Core(
-			middleware.WithPathParameters(&h.pathParameters),
-			middleware.WithResponseType(User{}),
-		)
+func GetHandlerF() handler.Handler {
+	h := &GetHandler{}
 
-		return h
+	h.MiddlewareList = []handler.Middleware{
+		middleware.PathParameters{Parameters: &h.pathParameters},
 	}
+
+	return h
 }
 
 // Serve /

@@ -7,13 +7,13 @@ It also provides you with a set of rapidoc handlers to serve a live documentatio
 
 	import (
 		"github.com/gorilla/mux"
-		"github.com/mwm-io/gapi/server/openapi"
+		"github.com/mwm-io/gapi/openapi"
 	)
 
 	// your router with routes.
 	var r *mux.Router
 
-	err := openapi.AddRapidocHandlers(r, openapi.Config{})
+	err := openapi.AddRapidocHandlers(r, openapi.config{})
 	if err != nil {
 		log.Printf("error while adding rapidoc %+v\n", err)
 	}
@@ -23,8 +23,8 @@ It also provides you with a set of rapidoc handlers to serve a live documentatio
 	// your handler
 	type MyHandler struct{}
 
-	// Doc implements the openapi.OperationDescriptor interface
-	func (m PathParameters) Doc(builder *openapi.OperationBuilder) error {
+	// Doc implements the openapi.Documented interface
+	func (m PathParameters) Doc(builder *openapi.DocBuilder) error {
 		return builder.WithDescription("my handler description").
 			WithParams({
 				ObjectID string `path:"objectID"`

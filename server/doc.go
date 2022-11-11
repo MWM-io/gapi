@@ -1,7 +1,7 @@
 /*
 Package server provides a simple router based https://github.com/gorilla/mux,
-with a Handler type return the response (not serialized) and an error,
-as well as a Middleware type to allow middleware for this new Handler type.
+with a SpecOpenAPIHandler type return the response (not serialized) and an error,
+as well as a Middleware type to allow middleware for this new SpecOpenAPIHandler type.
 
 You can see middleware implementation in the github.com/mwm-io/gapi/middleware package.
 
@@ -15,7 +15,7 @@ You can see middleware implementation in the github.com/mwm-io/gapi/middleware p
 	r := server.NewMux()
 
 	// Add your http handlers.
-	var h Handler
+	var h SpecOpenAPIHandler
 	server.AddHandler(r, http.MethodGet, "/hello", h)
 
 	// Add your server options here.

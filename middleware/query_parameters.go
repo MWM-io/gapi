@@ -6,8 +6,8 @@ import (
 	"github.com/gorilla/schema"
 
 	"github.com/mwm-io/gapi/errors"
-	"github.com/mwm-io/gapi/server"
-	"github.com/mwm-io/gapi/server/openapi"
+	"github.com/mwm-io/gapi/handler"
+	"github.com/mwm-io/gapi/openapi"
 )
 
 var decoder = schema.NewDecoder()
@@ -18,8 +18,8 @@ type QueryParameters struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m QueryParameters) Wrap(h server.Handler) server.Handler {
-	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m QueryParameters) Wrap(h handler.Handler) handler.Handler {
+	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		if m.Parameters == nil {
 			return h.Serve(w, r)
 		}
@@ -35,8 +35,8 @@ func (m QueryParameters) Wrap(h server.Handler) server.Handler {
 	})
 }
 
-// Doc implements the openapi.OperationDescriptor interface
-func (m QueryParameters) Doc(builder *openapi.OperationBuilder) error {
+// Doc implements the openapi.Documented interface
+func (m QueryParameters) Doc(builder *openapi.DocBuilder) error {
 	if m.Parameters == nil {
 		return nil
 	}

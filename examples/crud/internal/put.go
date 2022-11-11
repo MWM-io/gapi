@@ -3,12 +3,13 @@ package internal
 import (
 	"net/http"
 
+	"github.com/mwm-io/gapi/handler"
 	"github.com/mwm-io/gapi/middleware"
-	"github.com/mwm-io/gapi/server"
+	"github.com/mwm-io/gapi/openapi"
 )
 
 type PutHandler struct {
-	server.MiddlewareHandler
+	handler.WithMiddlewares
 
 	body           UserBody
 	pathParameters struct {
@@ -16,18 +17,20 @@ type PutHandler struct {
 	}
 }
 
-func PutHandlerF() server.HandlerFactory {
-	return func() server.Handler {
-		h := &PutHandler{}
+func (h PutHandler) Doc(builder *openapi.DocBuilder) error {
+	builder.WithResponse(User{})
+	return nil
+}
 
-		h.MiddlewareHandler = middleware.Core(
-			middleware.WithBody(&h.body),
-			middleware.WithPathParameters(&h.pathParameters),
-			middleware.WithResponseType(User{}),
-		)
+func PutHandlerF() handler.Handler {
+	h := &PutHandler{}
 
-		return h
+	h.MiddlewareList = []handler.Middleware{
+		middleware.JsonBody(&h.body),
+		middleware.PathParameters{Parameters: &h.pathParameters},
 	}
+
+	return h
 }
 
 // Serve /

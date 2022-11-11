@@ -3,31 +3,34 @@ package internal
 import (
 	"net/http"
 
+	"github.com/mwm-io/gapi/handler"
 	"github.com/mwm-io/gapi/middleware"
-	"github.com/mwm-io/gapi/server"
+	"github.com/mwm-io/gapi/openapi"
 )
 
 type PostHandler struct {
-	server.MiddlewareHandler
+	handler.WithMiddlewares
 
 	body UserBody
 }
 
-func PostHandlerF() server.HandlerFactory {
-	return func() server.Handler {
-		h := &PostHandler{}
+func (h PostHandler) Doc(builder *openapi.DocBuilder) error {
+	builder.WithResponse(User{})
+	return nil
+}
 
-		h.MiddlewareHandler = middleware.Core(
-			middleware.WithBody(&h.body),
-			middleware.WithResponseType(User{}),
-		)
+func PostHandlerF() handler.Handler {
+	h := PostHandler{}
 
-		return h
+	h.MiddlewareList = []handler.Middleware{
+		middleware.JsonBody(&h.body),
 	}
+
+	return h
 }
 
 // Serve /
-func (h *PostHandler) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (h PostHandler) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	user := User{
 		UserBody: UserBody{
 			Name: h.body.Name,

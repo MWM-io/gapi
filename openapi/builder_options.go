@@ -77,7 +77,7 @@ func WithRedirect(statusCode int, location string) BuilderOption {
 	}
 }
 
-// WithHeaders add headers the the documented element.
+// WithHeaders add headers the documented element.
 func WithHeaders(headers map[string]string) BuilderOption {
 	return func(c *builderOptions) {
 		if c.headers == nil {

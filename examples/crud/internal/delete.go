@@ -3,29 +3,26 @@ package internal
 import (
 	"net/http"
 
+	"github.com/mwm-io/gapi/handler"
 	"github.com/mwm-io/gapi/middleware"
-	"github.com/mwm-io/gapi/server"
 )
 
 type DeleteHandler struct {
-	server.MiddlewareHandler
+	handler.WithMiddlewares
 
 	pathParameters struct {
 		ID int `path:"id"`
 	}
 }
 
-func DeleteHandlerF() server.HandlerFactory {
-	return func() server.Handler {
-		h := &DeleteHandler{}
+func DeleteHandlerF() handler.Handler {
+	h := &DeleteHandler{}
 
-		h.MiddlewareHandler = middleware.Core(
-			middleware.WithPathParameters(&h.pathParameters),
-			middleware.WithResponseType(User{}),
-		)
-
-		return h
+	h.MiddlewareList = []handler.Middleware{
+		middleware.PathParameters{Parameters: &h.pathParameters},
 	}
+
+	return h
 }
 
 // Serve /

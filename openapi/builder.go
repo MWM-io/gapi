@@ -9,8 +9,8 @@ import (
 	"github.com/mwm-io/gapi/errors"
 )
 
-// OperationBuilder is a builder to simplify the documentation of an operation
-type OperationBuilder struct {
+// DocBuilder is a builder to simplify the documentation of an operation
+type DocBuilder struct {
 	operation  *openapi3.Operation
 	reflector  *openapi3.Reflector
 	httpMethod string
@@ -19,9 +19,9 @@ type OperationBuilder struct {
 	err []error
 }
 
-// NewOperationBuilder returns a new doc.OperationBuilder
-func NewOperationBuilder(reflector *openapi3.Reflector, method, path string) *OperationBuilder {
-	return &OperationBuilder{
+// NewDocBuilder returns a new doc.DocBuilder
+func NewDocBuilder(reflector *openapi3.Reflector, method, path string) *DocBuilder {
+	return &DocBuilder{
 		reflector:  reflector,
 		operation:  new(openapi3.Operation),
 		httpMethod: method,
@@ -30,17 +30,17 @@ func NewOperationBuilder(reflector *openapi3.Reflector, method, path string) *Op
 }
 
 // Operation return the openapi3.Operation used to compute doc for current operation
-func (b *OperationBuilder) Operation() *openapi3.Operation {
+func (b *DocBuilder) Operation() *openapi3.Operation {
 	return b.operation
 }
 
-// Reflector return the openapi3.Reflector used to compute doc for current operation
-func (b *OperationBuilder) Reflector() *openapi3.Reflector {
+// Reflector return the openapi3.Reflector used to builds OpenAPI Schema with reflected structures for current operation.
+func (b *DocBuilder) Reflector() *openapi3.Reflector {
 	return b.reflector
 }
 
 // Commit submit pending changes and return errors that was generated when building the operation
-func (b *OperationBuilder) Commit() *OperationBuilder {
+func (b *DocBuilder) Commit() *DocBuilder {
 	if err := b.reflector.Spec.AddOperation(b.httpMethod, b.path, *b.operation); err != nil {
 		b.err = append(b.err, err)
 	}
@@ -49,7 +49,7 @@ func (b *OperationBuilder) Commit() *OperationBuilder {
 }
 
 // Error return the error that was generated when building the operation
-func (b *OperationBuilder) Error() error {
+func (b *DocBuilder) Error() error {
 	if b.err == nil {
 		return nil
 	}
@@ -63,19 +63,19 @@ func (b *OperationBuilder) Error() error {
 }
 
 // WithSummary set a Summary (Title) to the operation
-func (b *OperationBuilder) WithSummary(summary string) *OperationBuilder {
+func (b *DocBuilder) WithSummary(summary string) *DocBuilder {
 	b.operation.WithSummary(summary)
 	return b
 }
 
 // WithDescription set a description (additional explanation) to the operation
-func (b *OperationBuilder) WithDescription(description string) *OperationBuilder {
+func (b *DocBuilder) WithDescription(description string) *DocBuilder {
 	b.operation.WithDescription(description)
 	return b
 }
 
 // WithTags set tags to the operation: used to organise you operation in sections
-func (b *OperationBuilder) WithTags(tags ...string) *OperationBuilder {
+func (b *DocBuilder) WithTags(tags ...string) *DocBuilder {
 	b.operation.WithTags(tags...)
 	return b
 }
@@ -85,7 +85,7 @@ func (b *OperationBuilder) WithTags(tags ...string) *OperationBuilder {
 // - WithDescription to add a description to body
 // - WithExample to add example(s) as body
 // TODO: Find a way to support non json body like CSV, files, multi part, url encoded ...
-func (b *OperationBuilder) WithBody(body interface{}, options ...BuilderOption) *OperationBuilder {
+func (b *DocBuilder) WithBody(body interface{}, options ...BuilderOption) *DocBuilder {
 	var c builderOptions
 	c.applyOptions(options...)
 
@@ -115,7 +115,7 @@ func (b *OperationBuilder) WithBody(body interface{}, options ...BuilderOption) 
 }
 
 // WithBodyExample set an example to request body to the operation
-func (b *OperationBuilder) WithBodyExample(value interface{}) *OperationBuilder {
+func (b *DocBuilder) WithBodyExample(value interface{}) *DocBuilder {
 	for mimeType, val := range b.operation.RequestBodyEns().RequestBodyEns().Content {
 		val.WithExample(value)
 		b.operation.RequestBodyEns().RequestBodyEns().Content[mimeType] = val
@@ -127,7 +127,7 @@ func (b *OperationBuilder) WithBodyExample(value interface{}) *OperationBuilder 
 // WithParams configure path and query parameters to the operation
 // To set path parameters use a struct with 'path' tag
 // To set query parameters use a struct with 'query' tag
-func (b *OperationBuilder) WithParams(body interface{}) *OperationBuilder {
+func (b *DocBuilder) WithParams(body interface{}) *DocBuilder {
 	if err := b.reflector.SetRequest(b.operation, body, b.httpMethod); err != nil {
 		b.err = append(b.err, err)
 	}
@@ -141,7 +141,7 @@ func (b *OperationBuilder) WithParams(body interface{}) *OperationBuilder {
 // - WithExample to add example(s) as response
 // - WithMimeType to set a custom contentType (default to json)
 // - WithStatusCode to set a specific status code. Default value are 204 for nil value and 200 for non nil value
-func (b *OperationBuilder) WithResponse(output interface{}, options ...BuilderOption) *OperationBuilder {
+func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) *DocBuilder {
 	c := builderOptions{
 		description: "",
 		examples:    nil,

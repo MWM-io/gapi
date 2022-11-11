@@ -1,16 +1,13 @@
 package middleware
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 
-	"github.com/mwm-io/gapi/errors"
-	"github.com/mwm-io/gapi/server"
-	"github.com/mwm-io/gapi/server/openapi"
-
 	"github.com/elnormous/contenttype"
+	"github.com/mwm-io/gapi/errors"
+	"github.com/mwm-io/gapi/handler"
 )
 
 // WithStatusCode is able to return its http status code.
@@ -18,39 +15,65 @@ type WithStatusCode interface {
 	StatusCode() int
 }
 
-// Marshaler is able to marshal.
-type Marshaler interface {
-	Marshal(v interface{}) ([]byte, error)
-}
-
-// MarshalerFunc is function type that implements Marshaler interface.
-type MarshalerFunc func(v interface{}) ([]byte, error)
-
-// Marshal implements the Marshaler interface.
-func (f MarshalerFunc) Marshal(v interface{}) ([]byte, error) {
-	return f(v)
-}
-
-// ResponseWriterMiddleware is a middleware that will take the response from the next handler
+// ResponseWriter is a middleware that will take the response from the next handler
 // and write it into the response.
 // It will choose the content type based on the request Accept header.
-type ResponseWriterMiddleware struct {
-	// Marshalers is the list of available Marshaler by content type.
-	Marshalers map[string]Marshaler
+type ResponseWriter struct {
+	// Encoders is the list of available Marshaller by content type.
+	Encoders map[string]Encoder
 	// DefaultContentType is the default content-type if the request don't have any.
 	DefaultContentType string
 	// ForcedContentType will always return a response serialized with this content-type.
 	ForcedContentType string
-	// Response is only use for the openAPI documentation to indicates the response type.
-	Response interface{}
+}
+
+// MakeResponseWriter return an initialized ResponseWriter with all supported encoders (see EncoderByContentType)
+// and ResponseWriter.DefaultContentType set to application/json
+func MakeResponseWriter() ResponseWriter {
+	return ResponseWriter{
+		Encoders:           EncoderByContentType,
+		DefaultContentType: "application/json",
+		ForcedContentType:  "application/json", // TODO : Remove later
+	}
+}
+
+// MakeJSONResponseWriter return an initialized ResponseWriter with all supported encoders (see EncoderByContentType)
+// and ResponseWriter.ForcedContentType set to application/json
+func MakeJSONResponseWriter() ResponseWriter {
+	return ResponseWriter{
+		Encoders:          EncoderByContentType,
+		ForcedContentType: "application/json",
+	}
+}
+
+// SetDefaultContentType set DefaultContentType and return current instance
+func (m ResponseWriter) SetDefaultContentType(contentType string) ResponseWriter {
+	m.DefaultContentType = contentType
+	return m
+}
+
+// SetForcedContentType set ForcedContentType and return current instance
+func (m ResponseWriter) SetForcedContentType(contentType string) ResponseWriter {
+	m.ForcedContentType = contentType
+	return m
+}
+
+// SetEncoders set Encoders and return current instance
+func (m ResponseWriter) SetEncoders(encoders map[string]Encoder) ResponseWriter {
+	m.Encoders = encoders
+	return m
+}
+
+// AddEncoder add an Encoder in field Encoders and return current instance
+func (m ResponseWriter) AddEncoder(contentType string, encoder Encoder) ResponseWriter {
+	m.Encoders[contentType] = encoder
+	return m
 }
 
 // Wrap implements the request.Middleware interface
-func (m ResponseWriterMiddleware) Wrap(h server.Handler) server.Handler {
-	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-		wrappedW := &ResponseWriter{ResponseWriter: w}
-
-		resp, err := h.Serve(wrappedW, r)
+func (m ResponseWriter) Wrap(h handler.Handler) handler.Handler {
+	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+		resp, err := h.Serve(w, r)
 
 		m.writeStatusCode(w, resp, err)
 
@@ -69,20 +92,7 @@ func (m ResponseWriterMiddleware) Wrap(h server.Handler) server.Handler {
 	})
 }
 
-// Doc implements the openapi.OperationDescriptor interface
-func (m ResponseWriterMiddleware) Doc(builder *openapi.OperationBuilder) error {
-	if m.Response == nil {
-		return nil
-	}
-
-	for contentType := range m.Marshalers {
-		builder.WithResponse(m.Response, openapi.WithMimeType(contentType))
-	}
-
-	return builder.Error()
-}
-
-func (m ResponseWriterMiddleware) writeStatusCode(w http.ResponseWriter, resp interface{}, err error) {
+func (m ResponseWriter) writeStatusCode(w http.ResponseWriter, resp interface{}, err error) {
 	if err != nil {
 		if errWithStatus, ok := err.(WithStatusCode); ok {
 			w.WriteHeader(errWithStatus.StatusCode())
@@ -104,7 +114,7 @@ func (m ResponseWriterMiddleware) writeStatusCode(w http.ResponseWriter, resp in
 	}
 }
 
-func (m ResponseWriterMiddleware) writeResponse(w http.ResponseWriter, r *http.Request, resp interface{}) error {
+func (m ResponseWriter) writeResponse(w http.ResponseWriter, r *http.Request, resp interface{}) error {
 	if resp == nil {
 		return nil
 	}
@@ -124,16 +134,16 @@ func (m ResponseWriterMiddleware) writeResponse(w http.ResponseWriter, r *http.R
 		return err
 
 	default:
-		contentType, marshaler, err := m.resolveContentType(r)
+		contentType, encoder, err := m.resolveContentType(r)
 		if err != nil {
 			return err
 		}
 
 		w.Header().Set("Content-Type", contentType)
 
-		body, err := marshaler.Marshal(resp)
-		if err != nil {
-			return err
+		body, errMarshal := encoder.Marshal(resp)
+		if errMarshal != nil {
+			return errMarshal
 		}
 
 		_, errW := w.Write(body)
@@ -142,22 +152,31 @@ func (m ResponseWriterMiddleware) writeResponse(w http.ResponseWriter, r *http.R
 	}
 }
 
-func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, Marshaler, error) {
+func (m ResponseWriter) resolveContentType(r *http.Request) (string, Encoder, error) {
 	if m.ForcedContentType != "" {
-		marshaler, ok := m.Marshalers[m.ForcedContentType]
+		encoder, ok := m.Encoders[m.ForcedContentType]
 		if !ok {
-			return "", nil, errors.Err(fmt.Sprintf("no content marshaler found for content type %s", m.ForcedContentType))
+			return "", nil, errors.Err(fmt.Sprintf("no content encoder found for content type %s", m.ForcedContentType))
 		}
 
-		return m.ForcedContentType, marshaler, nil
+		return m.ForcedContentType, encoder, nil
+	}
+
+	if encoder, ok := m.Encoders[m.DefaultContentType]; ok && m.DefaultContentType != "" {
+		// contenttype.GetAcceptableMediaType return a random value from availableTypes in this case
+		// We prefer always return the DefaultContentType
+		if accept := r.Header.Get("Accept"); accept == "" || accept == "*/*" {
+			return m.DefaultContentType, encoder, nil
+		}
 	}
 
 	var availableTypes []contenttype.MediaType
-	for mediaType := range m.Marshalers {
+	for mediaType := range m.Encoders {
 		parsedMediaType, err := contenttype.ParseMediaType(mediaType)
 		if err != nil {
 			return "", nil, errors.Wrap(err, fmt.Sprintf("invalid mediaType %s", mediaType)).WithStatus(http.StatusInternalServerError)
 		}
+
 		availableTypes = append(availableTypes, parsedMediaType)
 	}
 
@@ -166,53 +185,10 @@ func (m ResponseWriterMiddleware) resolveContentType(r *http.Request) (string, M
 		return "", nil, errors.Wrap(err, fmt.Sprintf("no content-type found to match the accept header %s", r.Header.Get("Accept"))).WithStatus(http.StatusUnsupportedMediaType)
 	}
 
-	marshaler, ok := m.Marshalers[accepted.String()]
+	encoder, ok := m.Encoders[accepted.String()]
 	if !ok {
-		return "", nil, errors.Err(fmt.Sprintf("no content marshaler found for content type %s", accepted.String()))
+		return "", nil, errors.Err(fmt.Sprintf("no content encoder found for content type %s", accepted.String()))
 	}
 
-	return accepted.String(), marshaler, nil
-}
-
-// ResponseWriter is used to store the statusCode and the content written to the http.ResponseWriter.
-type ResponseWriter struct {
-	http.ResponseWriter
-	statusCode int
-	content    *bytes.Buffer
-}
-
-// NewResponseWriter Create a new ResponseWriter
-func NewResponseWriter(w http.ResponseWriter) ResponseWriter {
-	return ResponseWriter{
-		ResponseWriter: w,
-		statusCode:     0,
-		content:        new(bytes.Buffer),
-	}
-}
-
-// StatusCode return the statusCode of the response.
-// It's 0 if it isn't set.
-func (rw *ResponseWriter) StatusCode() int {
-	return rw.statusCode
-}
-
-// Content returns the content already written to the response.
-func (rw *ResponseWriter) Content() io.Reader {
-	return rw.content
-}
-
-// WriteHeader Write the code in local and to the http response
-func (rw *ResponseWriter) WriteHeader(code int) {
-	rw.statusCode = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-// Write writes the data to the connection as part of an HTTP reply.
-func (rw *ResponseWriter) Write(b []byte) (int, error) {
-	if rw.statusCode == 0 {
-		rw.statusCode = http.StatusOK
-	}
-
-	rw.content.Write(b)
-	return rw.ResponseWriter.Write(b)
+	return accepted.String(), encoder, nil
 }

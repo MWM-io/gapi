@@ -7,7 +7,7 @@ Package errors provides a generic error carrying useful information:
  - a httpStatus
  - a timestamp of when the error was created
 
-This error implement the json.Marshaler and xml.Marshaler interface
+This error implement the json.Marshaler and xml.Marshaler interface,
 so you can return this error in your http handlers.
 
 It also implements the errors.Unwrap interface, allowing you to get the previous error.
@@ -52,7 +52,7 @@ You might want to carry more than just the message type from the source error.
 In order to do that you need to implement the ErrorBuilder interface
 and register your builder with an init function.
 
-Your builder should concerned a single type of error.
+Your builder should concern a single type of error.
 
 You can read an example with the errors/google package.
 
