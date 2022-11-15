@@ -6,6 +6,8 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"reflect"
+	"strings"
 
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/handler"
@@ -108,9 +110,44 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 
 		r.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
 
+		val := reflect.Indirect(reflect.ValueOf(m.BodyPtr))
+		typeOfParameters := val.Type()
+
+		for i := 0; i < val.NumField(); i++ {
+			typeOfFieldI := typeOfParameters.Field(i)
+			if typeOfFieldI.Tag.Get("required") != "true" {
+				continue
+			}
+
+			if !val.Field(i).IsZero() {
+				continue
+			}
+
+			fieldName := typeOfFieldI.Name
+			switch jsonTag := typeOfFieldI.Tag.Get("json"); jsonTag {
+			case "-":
+				return nil, errors.Err("cannot have an omitted field required").WithStatus(http.StatusBadRequest)
+
+			case "":
+				fmt.Println(1)
+				return nil, errors.Err(fmt.Sprintf("field %s is required", fieldName)).WithStatus(http.StatusBadRequest)
+
+			default:
+				parts := strings.Split(jsonTag, ",")
+				name := parts[0]
+				if name == "" {
+					name = fieldName
+				}
+
+				fmt.Println(2)
+
+				return nil, errors.Err(fmt.Sprintf("field %s is required", name)).WithStatus(http.StatusBadRequest)
+			}
+		}
+
 		if v, ok := m.BodyPtr.(BodyValidation); !m.SkipValidation && ok {
 			if errValidate := v.Validate(); errValidate != nil {
-				return nil, errors.Wrap(errValidate).WithMessage("validation failed").WithStatus(http.StatusUnprocessableEntity)
+				return nil, errors.Wrap(errValidate).WithStatus(http.StatusBadRequest)
 			}
 		}
 

@@ -10,6 +10,8 @@ func main() {
 	r := server.NewMux()
 
 	server.AddHandlerFactory(r, "POST", "/body", internal.NewBodyHandler)
+	server.AddHandlerFactory(r, "POST", "/body-with-params", internal.MakeBodyWithValidationHandler)
+
 	server.AddHandlerFactory(r, "GET", "/path-params/{first}/{second}", internal.NewPathParamsHandler)
 	server.AddHandlerFactory(r, "GET", "/query-params", internal.NewQueryParamsHandler)
 
