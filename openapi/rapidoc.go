@@ -2,12 +2,12 @@ package openapi
 
 import (
 	"net/http"
+	"strings"
 )
 
 // RapiDocHandler is a server.SpecOpenAPIHandler that will serve a html page with rapidoc loading the given openAPIJsonURL
 type RapiDocHandler struct {
 	openAPIJsonURL string
-	// auth           Authorization TODO: change by a middleware
 }
 
 // NewRapiDocHandler build a new RapiDocHandler.
@@ -19,18 +19,9 @@ func NewRapiDocHandler() RapiDocHandler {
 
 // Serve implements the server.SpecOpenAPIHandler interface
 func (h RapiDocHandler) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	// if h.auth != nil {
-	// 	authorized, err := h.auth.Authorize(w, r)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if !authorized {
-	// 		return h.auth.Login(w, r)
-	// 	}
-	// }
-
-	// TODO customisation options
-	_, err := w.Write([]byte(`
+	// TODO add customisation options : like icon, theme etc...
+	// TODO add auth middleware as option
+	return strings.NewReader(`
 <!doctype html> 
 <html>
 <head>
@@ -47,14 +38,12 @@ func (h RapiDocHandler) Serve(w http.ResponseWriter, r *http.Request) (interface
 	schema-style="table"
   > </rapi-doc>
 </body>
-</html>`))
-
-	return nil, err
+</html>`), nil
 }
 
 // RapiDocReceiverHandler is a server.SpecOpenAPIHandler that will serve the rapidoc oauth receiver
 func RapiDocReceiverHandler(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	_, err := w.Write([]byte(`
+	return strings.NewReader(`
 <!doctype html>
 <head>
   <script type="module" src="https://unpkg.com/rapidoc/dist/rapidoc-min.js"></script>
@@ -63,7 +52,5 @@ func RapiDocReceiverHandler(w http.ResponseWriter, r *http.Request) (interface{}
 <body>
   <oauth-receiver> </oauth-receiver>
 </body>
-`))
-
-	return nil, err
+`), nil
 }

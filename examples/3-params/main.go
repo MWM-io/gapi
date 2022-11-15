@@ -9,13 +9,9 @@ import (
 func main() {
 	r := server.NewMux()
 
-	server.AddHandlerFactory(r, "POST", "/body", internal.MakeBodyHandler)
-	server.AddHandlerFactory(r, "GET", "/path-params/{first}/{second}", internal.MakePathParamsHandler)
-	server.AddHandlerFactory(r, "GET", "/query-params", internal.MakeQueryParamsHandler)
-
-	// TODO : server.AddHandlerFactory(r, "GET", "/headers", internal.MakeHeaderHandler())
-
-	// TODO : Add a body & parameters validation example
+	server.AddHandlerFactory(r, "POST", "/body", internal.NewBodyHandler)
+	server.AddHandlerFactory(r, "GET", "/path-params/{first}/{second}", internal.NewPathParamsHandler)
+	server.AddHandlerFactory(r, "GET", "/query-params", internal.NewQueryParamsHandler)
 
 	gLog.Info("Starting http server")
 	if err := server.ServeAndHandleShutdown(r); err != nil {

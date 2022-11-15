@@ -87,7 +87,7 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 
 		unmarshaler, err := m.resolveContentType(r)
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to resolve content type").WithStatus(http.StatusBadRequest)
+			return nil, errors.Wrap(err).WithMessage("unable to resolve content type").WithStatus(http.StatusBadRequest)
 		}
 
 		var buffer bytes.Buffer
@@ -99,18 +99,18 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 
 		body, err := io.ReadAll(reader)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read body").WithStatus(http.StatusBadRequest)
+			return nil, errors.Wrap(err).WithMessage("failed to read body").WithStatus(http.StatusBadRequest)
 		}
 
 		if errUnmarshal := unmarshaler.Unmarshal(body, m.BodyPtr); errUnmarshal != nil {
-			return nil, errors.Wrap(errUnmarshal, "failed to unmarshal body").WithStatus(http.StatusBadRequest)
+			return nil, errors.Wrap(errUnmarshal).WithMessage("failed to unmarshal body").WithStatus(http.StatusBadRequest)
 		}
 
 		r.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
 
 		if v, ok := m.BodyPtr.(BodyValidation); !m.SkipValidation && ok {
 			if errValidate := v.Validate(); errValidate != nil {
-				return nil, errors.Wrap(errValidate, "validation failed").WithStatus(http.StatusUnprocessableEntity)
+				return nil, errors.Wrap(errValidate).WithMessage("validation failed").WithStatus(http.StatusUnprocessableEntity)
 			}
 		}
 
@@ -148,7 +148,7 @@ func (m BodyDecoder) resolveContentType(r *http.Request) (Decoder, error) {
 
 	wantedType, _, errContent := mime.ParseMediaType(contentType)
 	if errContent != nil {
-		return nil, errors.Wrap(errContent, fmt.Sprintf("unknown content-type %s", contentType))
+		return nil, errors.Wrap(errContent).WithMessage(fmt.Sprintf("unknown content-type %s", contentType))
 	}
 
 	if wantedType == "" {

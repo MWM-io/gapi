@@ -9,15 +9,23 @@ import (
 	"github.com/mwm-io/gapi/errors"
 )
 
+// User model
+// Tag description is used by openapi spec generation to add explanations about the field
 type User struct {
-	ID int `json:"id"`
+	ID int `json:"id" description:"Immutable & unique user identifier"`
 	UserBody
 }
 
+// UserBody model used as body by CreateHandler & UpdateHandler
+//
+// - Tag description is used by openapi spec generation to add explanations about the field
+// - Tag required is used by middleware.Body for body validation & openapi spec generation to flag the field as required
 type UserBody struct {
-	Name string `json:"name"`
+	Name string `json:"name" description:"User name: can be updated" required:"true"`
 }
 
+// Validate is an implementation of middleware.BodyValidation. If user UserBody is given to
+// middleware.Body, this function was called automatically and error handled
 func (u UserBody) Validate() error {
 	if u.Name == "" {
 		return errors.Err("name required").WithStatus(http.StatusPreconditionFailed)

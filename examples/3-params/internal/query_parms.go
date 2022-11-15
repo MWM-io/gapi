@@ -7,8 +7,8 @@ import (
 	"github.com/mwm-io/gapi/middleware"
 )
 
-// MakeQueryParamsHandler catch the registered query params, store it in h.params and reply with the params
-func MakeQueryParamsHandler() handler.Handler {
+// NewQueryParamsHandler catch the registered query params, store it in h.params and reply with the params
+func NewQueryParamsHandler() handler.Handler {
 	h := queryParamsHandler{}
 	h.MiddlewareList = []handler.Middleware{
 		middleware.QueryParameters{Parameters: &h.params},

@@ -7,8 +7,8 @@ import (
 	"github.com/mwm-io/gapi/middleware"
 )
 
-// MakeBodyHandler decode the given body, store it in h.body and reply with the decoded boyd
-func MakeBodyHandler() handler.Handler {
+// NewBodyHandler decode the given body, store it in h.body and reply with the decoded boyd
+func NewBodyHandler() handler.Handler {
 	h := bodyHandler{}
 	h.MiddlewareList = []handler.Middleware{
 		middleware.JsonBody(&h.body),

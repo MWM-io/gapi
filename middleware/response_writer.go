@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/elnormous/contenttype"
+
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/handler"
 )
@@ -174,7 +175,7 @@ func (m ResponseWriter) resolveContentType(r *http.Request) (string, Encoder, er
 	for mediaType := range m.Encoders {
 		parsedMediaType, err := contenttype.ParseMediaType(mediaType)
 		if err != nil {
-			return "", nil, errors.Wrap(err, fmt.Sprintf("invalid mediaType %s", mediaType)).WithStatus(http.StatusInternalServerError)
+			return "", nil, errors.Wrap(err).WithMessage(fmt.Sprintf("invalid mediaType %s", mediaType)).WithStatus(http.StatusInternalServerError)
 		}
 
 		availableTypes = append(availableTypes, parsedMediaType)
@@ -182,7 +183,7 @@ func (m ResponseWriter) resolveContentType(r *http.Request) (string, Encoder, er
 
 	accepted, _, err := contenttype.GetAcceptableMediaType(r, availableTypes)
 	if err != nil {
-		return "", nil, errors.Wrap(err, fmt.Sprintf("no content-type found to match the accept header %s", r.Header.Get("Accept"))).WithStatus(http.StatusUnsupportedMediaType)
+		return "", nil, errors.Wrap(err).WithMessage(fmt.Sprintf("no content-type found to match the accept header %s", r.Header.Get("Accept"))).WithStatus(http.StatusUnsupportedMediaType)
 	}
 
 	encoder, ok := m.Encoders[accepted.String()]

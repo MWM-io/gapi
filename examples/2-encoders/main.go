@@ -19,8 +19,8 @@ func main() {
 	server.AddHandler(r, "GET", "/error/auto", err.MakeAutoResponseHandler())
 
 	gLog.Info("Starting http server")
-	if err := server.ServeAndHandleShutdown(r); err != nil {
-		gLog.LogAny(err)
+	if errServe := server.ServeAndHandleShutdown(r); errServe != nil {
+		gLog.LogAny(errServe)
 	}
 
 	gLog.Info("Server stopped")

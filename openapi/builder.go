@@ -1,7 +1,6 @@
 package openapi
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/swaggest/openapi-go/openapi3"
@@ -56,7 +55,7 @@ func (b *DocBuilder) Error() error {
 
 	var err error
 	for _, item := range b.err {
-		err = errors.Wrap(err, fmt.Sprintf("%+v", item))
+		err = errors.Wrap(item)
 	}
 
 	return err
@@ -183,6 +182,42 @@ func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) 
 
 		resp.ResponseEns().WithContentItem(c.mimeType, contentResp)
 	}
+
+	b.operation.Responses.WithMapOfResponseOrRefValuesItem(statusCodeStr, resp)
+
+	return b
+}
+
+// WithError configure an error for current operation
+// Allowed options :
+// - WithDescription to add a description to error response
+func (b *DocBuilder) WithError(statusCode int, kind, message string, options ...BuilderOption) *DocBuilder {
+	c := builderOptions{
+		statusCode:  statusCode,
+		description: message,
+		mimeType:    "application/json",
+	}
+
+	c.applyOptions(options...)
+
+	exampleValue := errors.Err(message).WithKind(kind).WithStatus(statusCode)
+
+	if err := b.reflector.SetJSONResponse(b.operation, exampleValue, statusCode); err != nil {
+		b.err = append(b.err, err)
+	}
+
+	statusCodeStr := strconv.Itoa(c.statusCode)
+	resp := b.operation.Responses.MapOfResponseOrRefValues[statusCodeStr]
+	if c.description != "" {
+		resp.ResponseEns().WithDescription(c.description)
+	}
+
+	// Use given data as example : set an example
+	jsonResp := resp.ResponseEns().Content[c.mimeType]
+	jsonResp.WithExamplesItem(kind, openapi3.ExampleOrRef{
+		Example: new(openapi3.Example).WithValue(exampleValue),
+	})
+	resp.ResponseEns().WithContentItem(c.mimeType, jsonResp)
 
 	b.operation.Responses.WithMapOfResponseOrRefValuesItem(statusCodeStr, resp)
 

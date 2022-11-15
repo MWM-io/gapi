@@ -1,7 +1,6 @@
 package openapi
 
 import (
-	"encoding/json"
 	"net/http"
 	"sync"
 
@@ -53,19 +52,8 @@ func (h *SpecOpenAPIHandler) Serve(w http.ResponseWriter, r *http.Request) (inte
 
 	reflector, err := h.getReflector()
 	if err != nil {
-		// TODO : change it by response writer middleware
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil, err
 	}
 
-	body, errMarshal := json.Marshal(reflector.Spec)
-	if errMarshal != nil {
-		// TODO : change it by response writer middleware
-		http.Error(w, errMarshal.Error(), http.StatusInternalServerError)
-		return nil, errMarshal
-	}
-
-	// TODO : change it by response writer middleware
-	_, err = w.Write(body)
-	return nil, errMarshal
+	return reflector.Spec, nil
 }

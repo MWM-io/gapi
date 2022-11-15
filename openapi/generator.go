@@ -1,9 +1,12 @@
 package openapi
 
 import (
+	"net/http"
+
 	"github.com/gorilla/mux"
-	"github.com/mwm-io/gapi/handler"
 	"github.com/swaggest/openapi-go/openapi3"
+
+	"github.com/mwm-io/gapi/handler"
 )
 
 // PopulateReflector will add all the router routes into the given openapi3.Reflector
@@ -58,5 +61,8 @@ func BuildOperation(reflector *openapi3.Reflector, h interface{}, method, path s
 		}
 	}
 
-	return nil
+	return docBuilder.
+		WithError(http.StatusInternalServerError, "internal_error", "Internal server error, retry later or contact a developer if the problem persist").
+		Commit().
+		Error()
 }

@@ -7,8 +7,8 @@ import (
 	"github.com/mwm-io/gapi/middleware"
 )
 
-// MakePathParamsHandler catch path params in URI, store it in h.params and reply with the params
-func MakePathParamsHandler() handler.Handler {
+// NewPathParamsHandler catch path params in URI, store it in h.params and reply with the params
+func NewPathParamsHandler() handler.Handler {
 	h := pathParamsHandler{}
 	h.MiddlewareList = []handler.Middleware{
 		middleware.PathParameters{Parameters: &h.params},

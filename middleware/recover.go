@@ -17,7 +17,7 @@ func (r Recover) Wrap(h handler.Handler) handler.Handler {
 	return handler.Func(func(w http.ResponseWriter, r *http.Request) (result interface{}, err error) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				err = errors.Wrap(fmt.Errorf("%v", rec), "Panic: %v").
+				err = errors.Err(fmt.Sprintf("Panic: %v", rec)).
 					WithStatus(http.StatusInternalServerError).
 					WithSeverity(gLog.CriticalSeverity)
 			}
