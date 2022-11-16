@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/mwm-io/gapi/handler"
 	gLog "github.com/mwm-io/gapi/log"
-	"github.com/mwm-io/gapi/server"
 )
 
 // Log is a middleware that will:
@@ -17,8 +17,8 @@ type Log struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m Log) Wrap(h server.Handler) server.Handler {
-	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m Log) Wrap(h handler.Handler) handler.Handler {
+	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		var ctx context.Context
 		if m.Logger == nil {
 			ctx = gLog.NewContext(r.Context(), gLog.GlobalLogger())

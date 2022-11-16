@@ -6,7 +6,7 @@ import (
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/trace/propagation"
 
-	"github.com/mwm-io/gapi/server"
+	"github.com/mwm-io/gapi/handler"
 )
 
 // Tracing will add tracing information to the request context using opencensus..
@@ -17,12 +17,12 @@ type Tracing struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m Tracing) Wrap(h server.Handler) server.Handler {
-	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m Tracing) Wrap(h handler.Handler) handler.Handler {
+	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		var resp interface{}
 		var err error
 
-		h := ochttp.Handler{
+		newHandler := ochttp.Handler{
 			Propagation: m.Propagation,
 			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				resp, err = h.Serve(w, r)
@@ -31,7 +31,7 @@ func (m Tracing) Wrap(h server.Handler) server.Handler {
 			IsPublicEndpoint: m.IsPublicEndpoint,
 		}
 
-		h.ServeHTTP(w, r)
+		newHandler.ServeHTTP(w, r)
 
 		return resp, err
 	})

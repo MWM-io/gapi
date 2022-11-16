@@ -3,7 +3,6 @@ package errors
 import (
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -42,30 +41,23 @@ type FullError struct {
 	severity     gLog.Severity
 	timestamp    time.Time
 	stackTrace   gLog.StackTrace
-	prev         error
+	sourceErr    error
 }
 
 // Wrap will wrap the given error and return a new Error.
-func Wrap(previousError error, message string) Error {
-	if previousError == nil {
-		return nil
-	}
-
-	err := &FullError{
-		userMessage:  message,
+func Wrap(err error) Error {
+	newErr := &FullError{
+		userMessage:  err.Error(),
 		kind:         "",
-		errorMessage: message,
+		errorMessage: err.Error(),
 		timestamp:    time.Now(),
 		status:       http.StatusInternalServerError,
 		severity:     gLog.DefaultSeverity,
 		stackTrace:   stacktrace.New(),
+		sourceErr:    err,
 	}
-	err.prev = previousError
-	err.errorMessage = fmt.Errorf("%s: %w", message, previousError).Error()
 
-	errI := Build(err, previousError)
-
-	return errI
+	return newErr
 }
 
 // Err creates a new Error.
@@ -90,7 +82,7 @@ func (e *FullError) Error() string {
 
 // Unwrap implements the errors.Unwrap interface
 func (e *FullError) Unwrap() error {
-	return e.prev
+	return e.sourceErr
 }
 
 // StatusCode implements server.WithStatusCode

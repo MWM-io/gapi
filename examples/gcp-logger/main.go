@@ -8,28 +8,26 @@ import (
 	"os"
 
 	"cloud.google.com/go/logging"
-	"github.com/mwm-io/gapi/middleware"
-
-	"github.com/mwm-io/gapi/server/openapi"
-
+	"github.com/mwm-io/gapi/handler"
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/log/cloud_logging"
 	"github.com/mwm-io/gapi/server"
 )
 
+// TODO : Move this in other repo (gapi-addons/gcloud)
 func main() {
 	ctx := context.Background()
 	clientLogger := setupLog(ctx, os.Getenv("GOOGLE_CLOUD_PROJECT"))
+
 	defer clientLogger.Close()
 
 	r := server.NewMux()
 
-	server.AddHandler(r, "GET", "/hello", server.HandlerF(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	server.AddHandler(r, "GET", "/hello", handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		return "hello", nil
-	}, middleware.Core().Middlewares()...))
+	}))
 
-	err := openapi.AddRapidocHandlers(r, openapi.Config{})
-	if err != nil {
+	if err := server.AddDocHandlers(r); err != nil {
 		log.Printf("error while adding rapidoc %+v\n", err)
 	}
 

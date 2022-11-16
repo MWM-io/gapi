@@ -9,8 +9,8 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/mwm-io/gapi/errors"
-	"github.com/mwm-io/gapi/server"
-	"github.com/mwm-io/gapi/server/openapi"
+	"github.com/mwm-io/gapi/handler"
+	"github.com/mwm-io/gapi/openapi"
 )
 
 // PathParameters is a middleware that will set the request path parameters into the Parameters field.
@@ -19,8 +19,8 @@ type PathParameters struct {
 }
 
 // Wrap implements the request.Middleware interface
-func (m PathParameters) Wrap(h server.Handler) server.Handler {
-	return server.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (m PathParameters) Wrap(h handler.Handler) handler.Handler {
+	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		if m.Parameters == nil {
 			return h.Serve(w, r)
 		}
@@ -40,14 +40,14 @@ func (m PathParameters) Wrap(h server.Handler) server.Handler {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				x, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					return nil, errors.Wrap(err, fmt.Sprintf("%s must be a number", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
+					return nil, errors.Wrap(err).WithMessage(fmt.Sprintf("%s must be a number", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
 				}
 				field.SetInt(x)
 
 			case reflect.Float64, reflect.Float32:
 				x, err := strconv.ParseFloat(val, 64)
 				if err != nil {
-					return nil, errors.Wrap(err, fmt.Sprintf("%s must be a float", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
+					return nil, errors.Wrap(err).WithMessage(fmt.Sprintf("%s must be a float", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
 				}
 				field.SetFloat(x)
 
@@ -72,8 +72,8 @@ func (m PathParameters) Wrap(h server.Handler) server.Handler {
 	})
 }
 
-// Doc implements the openapi.OperationDescriptor interface
-func (m PathParameters) Doc(builder *openapi.OperationBuilder) error {
+// Doc implements the openapi.Documented interface
+func (m PathParameters) Doc(builder *openapi.DocBuilder) error {
 	if m.Parameters == nil {
 		return nil
 	}
