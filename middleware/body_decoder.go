@@ -87,6 +87,10 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 			return h.Serve(w, r)
 		}
 
+		if reflect.ValueOf(m.BodyPtr).Kind() != reflect.Ptr {
+			return nil, errors.Err("BodyPtr must be a pointer")
+		}
+
 		unmarshaler, err := m.resolveContentType(r)
 		if err != nil {
 			return nil, errors.Wrap(err).WithMessage("unable to resolve content type").WithStatus(http.StatusBadRequest)
@@ -110,38 +114,39 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 
 		r.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
 
-		val := reflect.Indirect(reflect.ValueOf(m.BodyPtr))
-		typeOfParameters := val.Type()
+		valOf := reflect.ValueOf(m.BodyPtr).Elem()
+		if kind := valOf.Kind(); kind == reflect.Struct {
+			val := reflect.Indirect(valOf)
 
-		for i := 0; i < val.NumField(); i++ {
-			typeOfFieldI := typeOfParameters.Field(i)
-			if typeOfFieldI.Tag.Get("required") != "true" {
-				continue
-			}
+			for i := 0; i < val.NumField(); i++ {
+				typeOfParameters := val.Type()
+				typeOfFieldI := typeOfParameters.Field(i)
 
-			if !val.Field(i).IsZero() {
-				continue
-			}
-
-			fieldName := typeOfFieldI.Name
-			switch jsonTag := typeOfFieldI.Tag.Get("json"); jsonTag {
-			case "-":
-				return nil, errors.Err("cannot have an omitted field required").WithStatus(http.StatusBadRequest)
-
-			case "":
-				fmt.Println(1)
-				return nil, errors.Err(fmt.Sprintf("field %s is required", fieldName)).WithStatus(http.StatusBadRequest)
-
-			default:
-				parts := strings.Split(jsonTag, ",")
-				name := parts[0]
-				if name == "" {
-					name = fieldName
+				if typeOfFieldI.Tag.Get("required") != "true" {
+					continue
 				}
 
-				fmt.Println(2)
+				if !val.Field(i).IsZero() {
+					continue
+				}
 
-				return nil, errors.Err(fmt.Sprintf("field %s is required", name)).WithStatus(http.StatusBadRequest)
+				fieldName := typeOfFieldI.Name
+				switch jsonTag := typeOfFieldI.Tag.Get("json"); jsonTag {
+				case "-":
+					return nil, errors.Err("cannot have an omitted field required").WithStatus(http.StatusBadRequest)
+
+				case "":
+					return nil, errors.Err(fmt.Sprintf("field %s is required", fieldName)).WithStatus(http.StatusBadRequest)
+
+				default:
+					parts := strings.Split(jsonTag, ",")
+					name := parts[0]
+					if name == "" {
+						name = fieldName
+					}
+
+					return nil, errors.Err(fmt.Sprintf("field %s is required", name)).WithStatus(http.StatusBadRequest)
+				}
 			}
 		}
 
