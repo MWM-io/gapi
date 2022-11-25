@@ -9,6 +9,7 @@ import (
 
 	"github.com/mwm-io/gapi/errors"
 	"github.com/mwm-io/gapi/handler"
+	"github.com/mwm-io/gapi/response"
 )
 
 // WithStatusCode is able to return its http status code.
@@ -121,6 +122,9 @@ func (m ResponseWriter) writeResponse(w http.ResponseWriter, r *http.Request, re
 	}
 
 	switch v := resp.(type) {
+	case response.Redirect:
+		http.Redirect(w, r, v.URL, v.StatusCode)
+		return nil
 	case io.ReadCloser:
 		defer v.Close()
 		_, err := io.Copy(w, v)
