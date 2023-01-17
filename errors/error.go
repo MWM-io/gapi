@@ -3,6 +3,7 @@ package errors
 import (
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -25,6 +26,7 @@ type Error interface {
 	StackTrace() gLog.StackTrace
 
 	WithMessage(string) Error
+	WithMessagef(string, ...interface{}) Error
 	WithKind(string) Error
 	WithStatus(int) Error
 	WithSeverity(gLog.Severity) Error
@@ -46,6 +48,10 @@ type FullError struct {
 
 // Wrap will wrap the given error and return a new Error.
 func Wrap(err error) Error {
+	if err != nil {
+		return nil
+	}
+
 	newErr := &FullError{
 		userMessage:  err.Error(),
 		kind:         "",
@@ -136,6 +142,13 @@ func (e *FullError) WithStatus(status int) Error {
 // WithMessage sets the user message.
 func (e *FullError) WithMessage(message string) Error {
 	e.userMessage = message
+
+	return e
+}
+
+// WithMessagef sets the user message with format.
+func (e *FullError) WithMessagef(message string, opts ...interface{}) Error {
+	e.userMessage = fmt.Sprintf(message, opts...)
 
 	return e
 }
