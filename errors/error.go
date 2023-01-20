@@ -48,7 +48,7 @@ type FullError struct {
 
 // Wrap will wrap the given error and return a new Error.
 func Wrap(err error) Error {
-	if err != nil {
+	if err == nil {
 		return nil
 	}
 
