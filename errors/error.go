@@ -79,6 +79,19 @@ func Err(message string) Error {
 	}
 }
 
+// ErrF creates a new Error using format message.
+func ErrF(format string, args ...interface{}) Error {
+	return &FullError{
+		userMessage:  fmt.Sprintf(format, args...),
+		kind:         "",
+		errorMessage: fmt.Sprintf(format, args...),
+		timestamp:    time.Now(),
+		status:       http.StatusInternalServerError,
+		severity:     gLog.DefaultSeverity,
+		stackTrace:   stacktrace.New(),
+	}
+}
+
 // FullError implements the error interface.
 // It will return the "developer" message in opposition to the user message,
 // which is returned by FullError.Message
