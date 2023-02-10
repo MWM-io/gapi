@@ -36,6 +36,11 @@ func (h RapiDocHandler) Serve(_ http.ResponseWriter, _ *http.Request) (interface
 	return strings.NewReader(`
 <!doctype html> 
 <html>
+<style>
+    rapi-doc::part(section-navbar-item section-navbar-tag) {
+      color: var(--primary-color);
+    }
+</style>
 <head>
   <title>` + Config.GetDocPageTitle() + `</title>
   ` + favicon + `
