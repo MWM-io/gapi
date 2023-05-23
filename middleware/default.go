@@ -9,6 +9,6 @@ import (
 // You can update this list if you want to change middleware configs for all you handlers.
 var Defaults = []handler.Middleware{
 	MakeJSONResponseWriter(),
-	Log{Logger: gLog.GlobalLogger()},
+	Log{Logger: gLog.Logger()},
 	Recover{},
 }

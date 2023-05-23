@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/mwm-io/gapi/examples/3-params/internal"
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/server"
+
+	"github.com/mwm-io/gapi/examples/3-params/internal"
 )
 
 func main() {

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/mwm-io/gapi/examples/2-encoders/internal/err"
-	"github.com/mwm-io/gapi/examples/2-encoders/internal/hello"
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/server"
+
+	"github.com/mwm-io/gapi/examples/2-encoders/internal/err"
+	"github.com/mwm-io/gapi/examples/2-encoders/internal/hello"
 )
 
 func main() {

@@ -1,117 +1,119 @@
 package log
 
 import (
-	"context"
+	"sync"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-// Logger is able to construct entries and write them using an EntryWriter.
-type Logger struct {
-	w       EntryWriter
-	options []EntryOption
-}
+var (
+	globalLogger     *zap.Logger
+	globalLoggerMU   sync.Mutex
+	globalLoggerSync sync.Once
 
-// NewLogger creates a new logger.
-func NewLogger(w EntryWriter, options ...EntryOption) *Logger {
-	return &Logger{
-		w:       w,
-		options: options,
+	encoderConfig = zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "severity",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "message",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    encodeLevel(),
+		EncodeTime:     zapcore.RFC3339NanoTimeEncoder,
+		EncodeDuration: zapcore.NanosDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+)
+
+func encodeLevel() zapcore.LevelEncoder {
+	return func(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+		switch l {
+		case zapcore.DebugLevel:
+			enc.AppendString("DEBUG")
+		case zapcore.InfoLevel:
+			enc.AppendString("INFO")
+		case zapcore.WarnLevel:
+			enc.AppendString("WARNING")
+		case zapcore.ErrorLevel:
+			enc.AppendString("ERROR")
+		case zapcore.DPanicLevel:
+			enc.AppendString("CRITICAL")
+		case zapcore.PanicLevel:
+			enc.AppendString("ALERT")
+		case zapcore.FatalLevel:
+			enc.AppendString("EMERGENCY")
+		}
 	}
 }
 
-// NewDefaultLogger creates a new logger with the default stack of entry options:
-// - timestamp set to time.Now()
-// - tracing information from context (either opencensus or telemetry)
-// If you don't need these options, or just need some, you should use NewLogger and chose only the options you need.
-func NewDefaultLogger(w EntryWriter) *Logger {
-	return NewLogger(
-		w,
-		TimestampNowOpt(),
-		OpencensusTraceOpt(),
-		OpentelemetryTraceOpt(),
-	)
-}
-
-// Log logs a message with additional EntryOptions.
-func (l *Logger) Log(msg string, options ...EntryOption) {
-	l.
-		WithOptions(options...).
-		LogEntry(NewEntry(msg))
-}
-
-// LogAny logs interface{}thing, converting the given value into an entry.
-func (l *Logger) LogAny(v interface{}, options ...EntryOption) {
-	l.
-		WithOptions(options...).
-		WithOptions(AnyOpt(v)).
-		LogEntry(NewEntry(""))
-}
-
-// LogEntry logs an entry.
-func (l *Logger) LogEntry(entry Entry) {
-	MultiOpt(l.options...)(&entry)
-
-	l.w.WriteEntry(entry)
-}
-
-// WithOptions returns a new logger with additional EntryOptions.
-func (l *Logger) WithOptions(options ...EntryOption) *Logger {
-	return &Logger{
-		w:       l.w,
-		options: append(l.options, options...),
+func defaultConfig() *zap.Config {
+	return &zap.Config{
+		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		Encoding:         "json",
+		EncoderConfig:    encoderConfig,
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
 	}
 }
 
-// WithSeverity returns a new logger with a default severity.
-func (l *Logger) WithSeverity(severity Severity) *Logger {
-	return l.WithOptions(SeverityOpt(severity))
+// Logger return gapi global logger.
+func Logger() *zap.Logger {
+	globalLoggerSync.Do(func() {
+		if globalLogger != nil {
+			return
+		}
+
+		var err error
+
+		if globalLogger, err = defaultConfig().Build(); err != nil {
+			panic(err)
+		}
+	})
+
+	return globalLogger
 }
 
-// WithLabels returns a new logger with default labels.
-func (l *Logger) WithLabels(labels map[string]string) *Logger {
-	return l.WithOptions(LabelsOpt(labels))
+// SetLogger override global logger
+func SetLogger(l *zap.Logger) {
+	globalLoggerMU.Lock()
+	defer globalLoggerMU.Unlock()
+
+	globalLogger = l
 }
 
-// WithFields returns a new logger with default labels.
-func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
-	return l.WithOptions(FieldsOpt(fields))
+// Debug logs a debug message with additional zap.Field
+func Debug(msg string, fields ...zap.Field) {
+	Logger().Debug(msg, fields...)
 }
 
-// WithContext returns a new logger with a new context.
-func (l *Logger) WithContext(ctx context.Context) *Logger {
-	return l.WithOptions(ContextOpt(ctx))
+// Info logs an info message with additional zap.Field
+func Info(msg string, fields ...zap.Field) {
+	Logger().Info(msg, fields...)
 }
 
-// Emergency logs an emergency message with additional EntryOptions.
-func (l *Logger) Emergency(msg string, options ...EntryOption) {
-	l.WithSeverity(EmergencySeverity).Log(msg, options...)
+// Warn logs a warning message with additional zap.Field
+func Warn(msg string, fields ...zap.Field) {
+	Logger().Warn(msg, fields...)
 }
 
-// Alert logs an alert message with additional EntryOptions.
-func (l *Logger) Alert(msg string, options ...EntryOption) {
-	l.WithSeverity(AlertSeverity).Log(msg, options...)
+// Error logs an error message with additional zap.Field
+func Error(msg string, fields ...zap.Field) {
+	Logger().Error(msg, fields...)
 }
 
-// Critical logs a critical message with additional EntryOptions.
-func (l *Logger) Critical(msg string, options ...EntryOption) {
-	l.WithSeverity(CriticalSeverity).Log(msg, options...)
+// Critical logs a critical message with additional zap.Field
+func Critical(msg string, fields ...zap.Field) {
+	Logger().DPanic(msg, fields...)
 }
 
-// Error logs an error message with additional EntryOptions.
-func (l *Logger) Error(msg string, options ...EntryOption) {
-	l.WithSeverity(ErrorSeverity).Log(msg, options...)
+// Alert logs an alert message with additional zap.Field
+func Alert(msg string, fields ...zap.Field) {
+	Logger().Panic(msg, fields...)
 }
 
-// Warn logs a warning message with additional EntryOptions.
-func (l *Logger) Warn(msg string, options ...EntryOption) {
-	l.WithSeverity(WarnSeverity).Log(msg, options...)
-}
-
-// Info logs an info message with additional EntryOptions.
-func (l *Logger) Info(msg string, options ...EntryOption) {
-	l.WithSeverity(InfoSeverity).Log(msg, options...)
-}
-
-// Debug logs a debug message with additional EntryOptions.
-func (l *Logger) Debug(msg string, options ...EntryOption) {
-	l.WithSeverity(DebugSeverity).Log(msg, options...)
+// Emergency logs an emergency message with additional zap.Field
+func Emergency(msg string, fields ...zap.Field) {
+	Logger().Fatal(msg, fields...)
 }
