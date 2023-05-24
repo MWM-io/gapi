@@ -13,5 +13,4 @@ require (
 	go.opencensus.io v0.23.0
 	go.opentelemetry.io/otel/trace v1.9.0
 	google.golang.org/genproto v0.0.0-20221109142239-94d6d90a7d66
-	google.golang.org/grpc v1.50.1
 )

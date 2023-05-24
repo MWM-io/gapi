@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	gLog "github.com/mwm-io/gapi/log"
-	"github.com/mwm-io/gapi/stacktrace"
 )
 
 // Error represents the interface for the FullError struct.
@@ -21,17 +18,11 @@ type Error interface {
 	Message() string
 	Kind() string
 	StatusCode() int
-	Severity() gLog.Severity
 	Timestamp() time.Time
-	StackTrace() gLog.StackTrace
 
-	WithMessage(string) Error
-	WithMessagef(string, ...interface{}) Error
+	WithMessage(format string, args ...interface{}) Error
 	WithKind(string) Error
 	WithStatus(int) Error
-	WithSeverity(gLog.Severity) Error
-	WithTimestamp(time.Time) Error
-	WithStackTrace(trace gLog.StackTrace) Error
 }
 
 // FullError is a concrete error that implements the Error interface
@@ -40,9 +31,7 @@ type FullError struct {
 	kind         string
 	errorMessage string
 	status       int
-	severity     gLog.Severity
 	timestamp    time.Time
-	stackTrace   gLog.StackTrace
 	sourceErr    error
 }
 
@@ -58,8 +47,6 @@ func Wrap(err error) Error {
 		errorMessage: err.Error(),
 		timestamp:    time.Now(),
 		status:       http.StatusInternalServerError,
-		severity:     gLog.DefaultSeverity,
-		stackTrace:   stacktrace.New(),
 		sourceErr:    err,
 	}
 
@@ -67,28 +54,15 @@ func Wrap(err error) Error {
 }
 
 // Err creates a new Error.
-func Err(message string) Error {
+func Err(format string, args ...interface{}) Error {
+	message := fmt.Sprintf(format, args...)
+
 	return &FullError{
 		userMessage:  message,
 		kind:         "",
 		errorMessage: message,
 		timestamp:    time.Now(),
 		status:       http.StatusInternalServerError,
-		severity:     gLog.DefaultSeverity,
-		stackTrace:   stacktrace.New(),
-	}
-}
-
-// ErrF creates a new Error using format message.
-func ErrF(format string, args ...interface{}) Error {
-	return &FullError{
-		userMessage:  fmt.Sprintf(format, args...),
-		kind:         "",
-		errorMessage: fmt.Sprintf(format, args...),
-		timestamp:    time.Now(),
-		status:       http.StatusInternalServerError,
-		severity:     gLog.DefaultSeverity,
-		stackTrace:   stacktrace.New(),
 	}
 }
 
@@ -119,23 +93,9 @@ func (e *FullError) Kind() string {
 	return e.kind
 }
 
-// Severity implements the gLog.WithSeverity interface.
-func (e *FullError) Severity() gLog.Severity {
-	if e.severity == gLog.DefaultSeverity {
-		return gLog.ErrorSeverity
-	}
-
-	return e.severity
-}
-
 // Timestamp returns the error timestamp.
 func (e *FullError) Timestamp() time.Time {
 	return e.timestamp
-}
-
-// StackTrace returns the error stacktrace.
-func (e *FullError) StackTrace() gLog.StackTrace {
-	return e.stackTrace
 }
 
 // WithStatus sets the error status.
@@ -143,25 +103,12 @@ func (e *FullError) StackTrace() gLog.StackTrace {
 func (e *FullError) WithStatus(status int) Error {
 	e.status = status
 
-	if status >= 400 && status < 500 {
-		e.severity = gLog.WarnSeverity
-	} else if status >= 500 {
-		e.severity = gLog.ErrorSeverity
-	}
-
 	return e
 }
 
 // WithMessage sets the user message.
-func (e *FullError) WithMessage(message string) Error {
-	e.userMessage = message
-
-	return e
-}
-
-// WithMessagef sets the user message with format.
-func (e *FullError) WithMessagef(message string, opts ...interface{}) Error {
-	e.userMessage = fmt.Sprintf(message, opts...)
+func (e *FullError) WithMessage(format string, args ...interface{}) Error {
+	e.userMessage = fmt.Sprintf(format, args...)
 
 	return e
 }
@@ -169,27 +116,6 @@ func (e *FullError) WithMessagef(message string, opts ...interface{}) Error {
 // WithKind sets the error kind.
 func (e *FullError) WithKind(kind string) Error {
 	e.kind = kind
-
-	return e
-}
-
-// WithSeverity sets the error severity.
-func (e *FullError) WithSeverity(severity gLog.Severity) Error {
-	e.severity = severity
-
-	return e
-}
-
-// WithTimestamp sets the error timestamp.
-func (e *FullError) WithTimestamp(t time.Time) Error {
-	e.timestamp = t
-
-	return e
-}
-
-// WithStackTrace sets the error stacktrace.
-func (e *FullError) WithStackTrace(trace gLog.StackTrace) Error {
-	e.stackTrace = trace
 
 	return e
 }

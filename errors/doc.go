@@ -1,11 +1,10 @@
 /*
 Package errors provides a generic error carrying useful information:
 
- - StackTrace for debugging
- - 2 different messages: one for the end user and one for the developer
- - a Kind: a string that can act as an ID for errors
- - a httpStatus
- - a timestamp of when the error was created
+  - 2 different messages: one for the end user and one for the developer
+  - a Kind: a string that can act as an ID for errors
+  - a httpStatus
+  - a timestamp of when the error was created
 
 This error implement the json.Marshaler and xml.Marshaler interface,
 so you can return this error in your http handlers.
@@ -81,6 +80,5 @@ and why don't we use the FullError struct directly.
 This is because `(*FullError)(nil) != nil`: a nil value with a concrete type won't match nil.
 
 In order to keep the idiomatic `if Err("my err") != nil`, we always return the Error interface.
-
 */
 package errors
