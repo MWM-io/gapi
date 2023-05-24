@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -136,7 +135,7 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 					return nil, errors.Err("cannot have an omitted field required").WithStatus(http.StatusBadRequest)
 
 				case "":
-					return nil, errors.Err(fmt.Sprintf("field %s is required", fieldName)).WithStatus(http.StatusBadRequest)
+					return nil, errors.Err("field %s is required", fieldName).WithStatus(http.StatusBadRequest)
 
 				default:
 					parts := strings.Split(jsonTag, ",")
@@ -145,7 +144,7 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 						name = fieldName
 					}
 
-					return nil, errors.Err(fmt.Sprintf("field %s is required", name)).WithStatus(http.StatusBadRequest)
+					return nil, errors.Err("field %s is required", name).WithStatus(http.StatusBadRequest)
 				}
 			}
 		}
@@ -177,7 +176,7 @@ func (m BodyDecoder) resolveContentType(r *http.Request) (Decoder, error) {
 	if m.ForcedContentType != "" {
 		result, ok := m.Decoders[m.ForcedContentType]
 		if !ok {
-			return nil, errors.Err(fmt.Sprintf("no content decoder found for content type %s", m.ForcedContentType))
+			return nil, errors.Err("no content decoder found for content type %s", m.ForcedContentType)
 		}
 
 		return result, nil
@@ -190,7 +189,7 @@ func (m BodyDecoder) resolveContentType(r *http.Request) (Decoder, error) {
 
 	wantedType, _, errContent := mime.ParseMediaType(contentType)
 	if errContent != nil {
-		return nil, errors.Wrap(errContent).WithMessage(fmt.Sprintf("unknown content-type %s", contentType))
+		return nil, errors.Wrap(errContent).WithMessage("unknown content-type %s", contentType)
 	}
 
 	if wantedType == "" {
@@ -199,7 +198,7 @@ func (m BodyDecoder) resolveContentType(r *http.Request) (Decoder, error) {
 
 	result, ok := m.Decoders[wantedType]
 	if !ok || result == nil {
-		return nil, errors.Err(fmt.Sprintf("unsupported content-type %s", wantedType))
+		return nil, errors.Err("unsupported content-type %s", wantedType)
 	}
 
 	return result, nil

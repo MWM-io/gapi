@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -40,14 +39,14 @@ func (m PathParameters) Wrap(h handler.Handler) handler.Handler {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				x, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					return nil, errors.Wrap(err).WithMessage(fmt.Sprintf("%s must be a number", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
+					return nil, errors.Wrap(err).WithMessage("%s must be a number", typeOfParameters.Field(i).Name).WithStatus(http.StatusBadRequest)
 				}
 				field.SetInt(x)
 
 			case reflect.Float64, reflect.Float32:
 				x, err := strconv.ParseFloat(val, 64)
 				if err != nil {
-					return nil, errors.Wrap(err).WithMessage(fmt.Sprintf("%s must be a float", typeOfParameters.Field(i).Name)).WithStatus(http.StatusBadRequest)
+					return nil, errors.Wrap(err).WithMessage("%s must be a float", typeOfParameters.Field(i).Name).WithStatus(http.StatusBadRequest)
 				}
 				field.SetFloat(x)
 
@@ -64,7 +63,7 @@ func (m PathParameters) Wrap(h handler.Handler) handler.Handler {
 			case reflect.String:
 				field.SetString(val)
 			default:
-				return nil, errors.Err(fmt.Sprintf("cannot have a parameter with %q type", field.Kind().String())).WithStatus(http.StatusBadRequest)
+				return nil, errors.Err("cannot have a parameter with %q type", field.Kind().String()).WithStatus(http.StatusBadRequest)
 			}
 		}
 
