@@ -1,48 +1,59 @@
 /*
-Package log provides a simple and extensible logger.
+Package log
+
+Gapi logging is based on zap.Logger and use its own global logger system to print logs.
+This global logger can be overridden with your own zap.Logger
 
 ## Usage
 
-First, you need to build your logger instance, using log.NewDefaultLogger,
-specifying what's your output (log.EntryWriter).
-This default logger will provide timestamp, stacktrace and tracing for all your logs.
-Use log.NewLogger if you need other options. (see EntryOption)
+### Public methods
 
-You can then use this logger instance in 3 different ways:
- - pass your logger instance across all the functions that need it
- - push it in a context, and retrieve it in the functions that need it (see With Context)
- - set it globally, and use the global instance when needed
+Gapi logging expose a list of public methods to print logs for various logging levels:
+- log.Debug(msg string, fields ...zap.Field)
+- log.Info(msg string, fields ...zap.Field)
+- log.Warn(msg string, fields ...zap.Field)
+- log.Error(msg string, fields ...zap.Field)
+- log.Critical(msg string, fields ...zap.Field)
+- log.Alert(msg string, fields ...zap.Field)
+- log.Emergency(msg string, fields ...zap.Field)
 
-	// Setup your log output
-	var logOutput log.EntryWriter
-	var ctx context.Context
+	import (
+		"github.com/mwm-io/gapi/handler"
+		gLog "github.com/mwm-io/gapi/log"
+		"github.com/mwm-io/gapi/server"
+	)
 
-	// use instance
-	logger := log.NewDefaultLogger(logOutput)
-	logger.Log("my log")
+	func main() {
+		r := server.NewMux()
 
-	// use global
-	log.SetGlobalLogger(logger)
-	log.Log("my log")
+		server.AddHandler(r, "GET", "/", handler.Func(HelloWorldHandler))
 
-	// use with context
-	ctx = log.WithContext(ctx, logger)
-	log.LogC(ctx, "my log")
+		gLog.Info("Starting http server")
+		if err := server.ServeAndHandleShutdown(r); err != nil {
+			gLog.Error(err)
+		}
 
-## With Context
+		gLog.Info("Server stopped")
+	}
 
-If you can, you should rather use logging function with context.
-The global functions with context will first try to get the logger from the context,
-but if none is found, it will use the global logger.
+### Global instance
 
-## Package design
+Logger instance can be retrieved using log.Logger().
 
-Its flow is based around the Entry struct.
-You can log anything, (ie with log.LogAny) the input will be converted into an Entry.
-A set of interfaces is available so the data you are logging can implement some of them to improve readability.
+	log := log.Logger()
+	log.Info("my log")
 
-The second part is the EntryWriter interface.
-It corresponds to the output of the logger.
+As mention earlier, you can override gapi logger with log.SetLogger() by passing
+your custom zap.Logger instance.
 
+	    myLogger := zap.NewProduction()
+		log.SetLogger(myLogger)
+		log.Log("my log")
+
+### Context
+
+Context can also be used to store/get logger:
+- log.FromContext(ctx) [retrieve gapi logger from context]
+- log.NewContext(ctx, logger) [store given zap.Logger into context]
 */
 package log

@@ -1,38 +1,34 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/mwm-io/gapi/handler"
 	gLog "github.com/mwm-io/gapi/log"
 )
 
 // Log is a middleware that will:
-// - populate the logger context with the request logger
 // - set the given logger into the request's context.
 // - log any error returned by the next handler
 type Log struct {
-	Logger *gLog.Logger
+	Logger *zap.Logger
 }
 
 // Wrap implements the request.Middleware interface
 func (m Log) Wrap(h handler.Handler) handler.Handler {
 	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-		var ctx context.Context
 		if m.Logger == nil {
-			ctx = gLog.NewContext(r.Context(), gLog.GlobalLogger())
-		} else {
-			ctx = gLog.NewContext(r.Context(), m.Logger)
+			m.Logger = gLog.Logger()
 		}
 
-		ctx = gLog.CtxWithContext(ctx)
-		r = r.WithContext(ctx)
+		ctx := gLog.NewContext(r.Context(), m.Logger)
 
-		resp, err := h.Serve(w, r)
+		resp, err := h.Serve(w, r.WithContext(ctx))
 
 		if err != nil {
-			gLog.LogAnyC(r.Context(), err)
+			m.Logger.Error(err.Error())
 		}
 
 		return resp, err
