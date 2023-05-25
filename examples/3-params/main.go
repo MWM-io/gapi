@@ -18,7 +18,7 @@ func main() {
 
 	gLog.Info("Starting http server")
 	if err := server.ServeAndHandleShutdown(r); err != nil {
-		gLog.LogAny(err)
+		gLog.Emergency(err.Error())
 	}
 
 	gLog.Info("Server stopped")
