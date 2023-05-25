@@ -23,6 +23,5 @@ You can see middleware implementation in the github.com/mwm-io/gapi/middleware p
 	if err != nil {
 		log.Fatal(err)
 	}
-
 */
 package server

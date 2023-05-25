@@ -13,8 +13,8 @@ import (
 // You can use it if you want a new instance of your handler for each call.
 // It must be use useful if :
 //
-//  - you use a middleware for handle request params like middleware.BodyDecoder, middleware.PathParameters, etc.
-//  - you store properties in your handler struct during Serve process
+//   - you use a middleware for handle request params like middleware.BodyDecoder, middleware.PathParameters, etc.
+//   - you store properties in your handler struct during Serve process
 func AddHandlerFactory(router *mux.Router, method, path string, f handler.Factory) {
 	router.Methods(method).
 		Path(path).

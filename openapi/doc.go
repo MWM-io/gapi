@@ -32,6 +32,5 @@ It also provides you with a set of rapidoc handlers to serve a live documentatio
 			}).
 			Error()
 	}
-
 */
 package openapi
