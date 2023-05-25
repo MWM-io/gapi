@@ -77,7 +77,7 @@ func (m ResponseWriter) Wrap(h handler.Handler) handler.Handler {
 	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		resp, err := h.Serve(w, r)
 
-		m.writeStatusCode(w, resp, err)
+		w.WriteHeader(m.StatusCodeFromHTTPServeResult(resp, err))
 
 		var errW error
 		if err != nil {
@@ -94,26 +94,25 @@ func (m ResponseWriter) Wrap(h handler.Handler) handler.Handler {
 	})
 }
 
-func (m ResponseWriter) writeStatusCode(w http.ResponseWriter, resp interface{}, err error) {
+// StatusCodeFromHTTPServeResult returns the http status code from http.Serve result.
+func (m ResponseWriter) StatusCodeFromHTTPServeResult(resp interface{}, err error) int {
 	if err != nil {
 		if errWithStatus, ok := err.(WithStatusCode); ok {
-			w.WriteHeader(errWithStatus.StatusCode())
-			return
+			return errWithStatus.StatusCode()
 		}
 
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError
 	}
 
 	if resp == nil {
-		w.WriteHeader(http.StatusNoContent)
-		return
+		return http.StatusNoContent
 	}
 
 	if respWithStatus, ok := err.(WithStatusCode); ok {
-		w.WriteHeader(respWithStatus.StatusCode())
-		return
+		return respWithStatus.StatusCode()
 	}
+
+	return http.StatusOK
 }
 
 func (m ResponseWriter) writeResponse(w http.ResponseWriter, r *http.Request, resp interface{}) error {
