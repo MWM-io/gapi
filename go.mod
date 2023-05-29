@@ -1,6 +1,6 @@
 module github.com/mwm-io/gapi
 
-go 1.18
+go 1.19
 
 require (
 	github.com/elnormous/contenttype v1.0.3
