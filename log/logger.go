@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"sync"
 
 	"go.uber.org/zap"
@@ -9,7 +10,6 @@ import (
 
 var (
 	globalLogger     *zap.Logger
-	globalLoggerMU   sync.Mutex
 	globalLoggerSync sync.Once
 
 	encoderConfig = zapcore.EncoderConfig{
@@ -59,7 +59,11 @@ func defaultConfig() *zap.Config {
 }
 
 // Logger return gapi global logger.
-func Logger() *zap.Logger {
+func Logger(ctx context.Context) *zap.Logger {
+	if l, ok := FromContext(ctx); ok {
+		return l
+	}
+
 	globalLoggerSync.Do(func() {
 		if globalLogger != nil {
 			return
@@ -75,45 +79,37 @@ func Logger() *zap.Logger {
 	return globalLogger
 }
 
-// SetLogger override global logger
-func SetLogger(l *zap.Logger) {
-	globalLoggerMU.Lock()
-	defer globalLoggerMU.Unlock()
-
-	globalLogger = l
-}
-
 // Debug logs a debug message with additional zap.Field
-func Debug(msg string, fields ...zap.Field) {
-	Logger().Debug(msg, fields...)
+func Debug(ctx context.Context, msg string, fields ...zap.Field) {
+	Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
 }
 
 // Info logs an info message with additional zap.Field
-func Info(msg string, fields ...zap.Field) {
-	Logger().Info(msg, fields...)
+func Info(ctx context.Context, msg string, fields ...zap.Field) {
+	Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
 }
 
 // Warn logs a warning message with additional zap.Field
-func Warn(msg string, fields ...zap.Field) {
-	Logger().Warn(msg, fields...)
+func Warn(ctx context.Context, msg string, fields ...zap.Field) {
+	Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
 }
 
 // Error logs an error message with additional zap.Field
-func Error(msg string, fields ...zap.Field) {
-	Logger().Error(msg, fields...)
+func Error(ctx context.Context, msg string, fields ...zap.Field) {
+	Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
 }
 
 // Critical logs a critical message with additional zap.Field
-func Critical(msg string, fields ...zap.Field) {
-	Logger().DPanic(msg, fields...)
+func Critical(ctx context.Context, msg string, fields ...zap.Field) {
+	Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Panic(msg, fields...)
 }
 
 // Alert logs an alert message with additional zap.Field
-func Alert(msg string, fields ...zap.Field) {
-	Logger().Panic(msg, fields...)
+func Alert(ctx context.Context, msg string, fields ...zap.Field) {
+	Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Panic(msg, fields...)
 }
 
 // Emergency logs an emergency message with additional zap.Field
-func Emergency(msg string, fields ...zap.Field) {
-	Logger().Fatal(msg, fields...)
+func Emergency(ctx context.Context, msg string, fields ...zap.Field) {
+	Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
 }
