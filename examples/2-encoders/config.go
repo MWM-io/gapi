@@ -9,7 +9,7 @@ import (
 func init() {
 	middleware.Defaults = []handler.Middleware{
 		// We removed the default response writer to control response encoding for each handler
-		middleware.Log{Logger: gLog.GlobalLogger()},
+		middleware.Log{Logger: gLog.Logger()},
 		middleware.Recover{},
 	}
 }

@@ -2,8 +2,10 @@ package server
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/gorilla/mux"
+
 	"github.com/mwm-io/gapi/handler"
 	"github.com/mwm-io/gapi/middleware"
 	"github.com/mwm-io/gapi/openapi"
@@ -46,6 +48,8 @@ func (e defaultHandleEngine) getMiddlewareList(h handler.Handler) []handler.Midd
 	if middlewareHandler, ok := h.(handler.MiddlewareAware); ok {
 		middlewareList = append(middlewareList, middlewareHandler.Middlewares()...)
 	}
+
+	sort.Sort(handler.ByWeight(middlewareList))
 
 	return middlewareList
 }
