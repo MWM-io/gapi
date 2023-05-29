@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/server"
 
@@ -9,6 +11,7 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	r := server.NewMux()
 
 	server.AddHandler(r, "GET", "/hello/json", hello.MakeJSONResponseHandler())
@@ -19,10 +22,10 @@ func main() {
 	server.AddHandler(r, "GET", "/error/xml", err.MakeXMLResponseHandler())
 	server.AddHandler(r, "GET", "/error/auto", err.MakeAutoResponseHandler())
 
-	gLog.Info("Starting http server")
+	gLog.Info(ctx, "Starting http server")
 	if errServe := server.ServeAndHandleShutdown(r); errServe != nil {
-		gLog.Emergency(errServe.Error())
+		gLog.Emergency(ctx, errServe.Error())
 	}
 
-	gLog.Info("Server stopped")
+	gLog.Info(ctx, "Server stopped")
 }

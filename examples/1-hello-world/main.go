@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/mwm-io/gapi/handler"
@@ -9,16 +10,17 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	r := server.NewMux()
 
 	server.AddHandler(r, "GET", "/", handler.Func(HelloWorldHandler))
 
-	gLog.Info("Starting http server")
+	gLog.Info(ctx, "Starting http server")
 	if err := server.ServeAndHandleShutdown(r); err != nil {
-		gLog.Emergency(err.Error())
+		gLog.Emergency(ctx, err.Error())
 	}
 
-	gLog.Info("Server stopped")
+	gLog.Info(ctx, "Server stopped")
 }
 
 // HelloWorldHandler is the simplest handler with core middlewares.

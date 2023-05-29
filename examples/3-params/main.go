@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/server"
 
@@ -8,6 +10,7 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	r := server.NewMux()
 
 	server.AddHandlerFactory(r, "POST", "/body", internal.NewBodyHandler)
@@ -16,10 +19,10 @@ func main() {
 	server.AddHandlerFactory(r, "GET", "/path-params/{first}/{second}", internal.NewPathParamsHandler)
 	server.AddHandlerFactory(r, "GET", "/query-params", internal.NewQueryParamsHandler)
 
-	gLog.Info("Starting http server")
+	gLog.Info(ctx, "Starting http server")
 	if err := server.ServeAndHandleShutdown(r); err != nil {
-		gLog.Emergency(err.Error())
+		gLog.Emergency(ctx, err.Error())
 	}
 
-	gLog.Info("Server stopped")
+	gLog.Info(ctx, "Server stopped")
 }

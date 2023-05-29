@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"context"
 
 	gLog "github.com/mwm-io/gapi/log"
 	"github.com/mwm-io/gapi/server"
@@ -12,6 +12,7 @@ import (
 // This simple example show you how to make a CRUD for the users model.
 // Each handler has a type.
 func main() {
+	ctx := context.Background()
 	r := server.NewMux()
 
 	// All following handler are complete example to know how to make a handler with request-scope data
@@ -29,14 +30,14 @@ func main() {
 	// server.AddDocHandlers add handler to expose API documentation.
 	// Go to http://localhost:8080 to see the result
 	if err := server.AddDocHandlers(r); err != nil {
-		log.Printf("error while adding rapidoc %+v\n", err)
+		gLog.Error(ctx, err.Error())
 	}
 
-	gLog.Info("Starting http server")
+	gLog.Info(ctx, "Starting http server")
 
 	if err := server.ServeAndHandleShutdown(r); err != nil {
-		gLog.Emergency(err.Error())
+		gLog.Emergency(ctx, err.Error())
 	}
 
-	gLog.Info("Server stopped")
+	gLog.Info(ctx, "Server stopped")
 }

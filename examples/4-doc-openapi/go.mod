@@ -1,8 +1,8 @@
 module github.com/mwm-io/gapi/examples/4-doc-openapi
 
-go 1.18
+go 1.19
 
-require github.com/mwm-io/gapi v0.1.0
+require github.com/mwm-io/gapi v0.2.0
 
 require (
 	github.com/elnormous/contenttype v1.0.3 // indirect
