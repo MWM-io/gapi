@@ -27,6 +27,8 @@ type ResponseWriter struct {
 	DefaultContentType string
 	// ForcedContentType will always return a response serialized with this content-type.
 	ForcedContentType string
+	// StatusCode stores response status code.
+	StatusCode int
 }
 
 // MakeResponseWriter return an initialized ResponseWriter with all supported encoders (see EncoderByContentType)
@@ -36,6 +38,7 @@ func MakeResponseWriter() ResponseWriter {
 		Encoders:           EncoderByContentType,
 		DefaultContentType: "application/json",
 		ForcedContentType:  "application/json", // TODO : Remove later
+		StatusCode:         http.StatusOK,
 	}
 }
 
@@ -45,6 +48,7 @@ func MakeJSONResponseWriter() ResponseWriter {
 	return ResponseWriter{
 		Encoders:          EncoderByContentType,
 		ForcedContentType: "application/json",
+		StatusCode:        http.StatusOK,
 	}
 }
 
@@ -77,7 +81,7 @@ func (m ResponseWriter) Wrap(h handler.Handler) handler.Handler {
 	return handler.Func(func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		resp, err := h.Serve(w, r)
 
-		w.WriteHeader(m.StatusCodeFromHTTPServeResult(resp, err))
+		m.StatusCode = m.StatusCodeFromHTTPServeResult(resp, err)
 
 		var errW error
 		if err != nil {
@@ -94,7 +98,7 @@ func (m ResponseWriter) Wrap(h handler.Handler) handler.Handler {
 	})
 }
 
-// StatusCodeFromHTTPServeResult returns the http status code from http.Serve result.
+// StatusCodeFromHTTPServeResult returns response http status code from http.Serve result
 func (m ResponseWriter) StatusCodeFromHTTPServeResult(resp interface{}, err error) int {
 	if err != nil {
 		if errWithStatus, ok := err.(WithStatusCode); ok {
@@ -108,15 +112,21 @@ func (m ResponseWriter) StatusCodeFromHTTPServeResult(resp interface{}, err erro
 		return http.StatusNoContent
 	}
 
-	if respWithStatus, ok := err.(WithStatusCode); ok {
+	if respWithStatus, ok := resp.(WithStatusCode); ok {
 		return respWithStatus.StatusCode()
 	}
 
-	return http.StatusOK
+	switch v := resp.(type) {
+	case response.Redirect:
+		return v.StatusCode
+	default:
+		return http.StatusOK
+	}
 }
 
 func (m ResponseWriter) writeResponse(w http.ResponseWriter, r *http.Request, resp interface{}) error {
 	if resp == nil {
+		w.WriteHeader(m.StatusCode)
 		return nil
 	}
 
@@ -126,14 +136,17 @@ func (m ResponseWriter) writeResponse(w http.ResponseWriter, r *http.Request, re
 		return nil
 	case io.ReadCloser:
 		defer v.Close()
+		w.WriteHeader(m.StatusCode)
 		_, err := io.Copy(w, v)
 		return err
 
 	case io.Reader:
+		w.WriteHeader(m.StatusCode)
 		_, err := io.Copy(w, v)
 		return err
 
 	case []byte:
+		w.WriteHeader(m.StatusCode)
 		_, err := w.Write(v)
 		return err
 
@@ -149,6 +162,8 @@ func (m ResponseWriter) writeResponse(w http.ResponseWriter, r *http.Request, re
 		if errMarshal != nil {
 			return errMarshal
 		}
+
+		w.WriteHeader(m.StatusCode)
 
 		_, errW := w.Write(body)
 
