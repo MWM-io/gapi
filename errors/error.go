@@ -41,6 +41,12 @@ func Wrap(err error) Error {
 		return nil
 	}
 
+	for _, builder := range errorBuilders {
+		if gErr := builder(err); gErr != nil {
+			return gErr
+		}
+	}
+
 	newErr := &FullError{
 		userMessage:  err.Error(),
 		kind:         "",
