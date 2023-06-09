@@ -23,6 +23,7 @@ type Error interface {
 	WithMessage(format string, args ...interface{}) Error
 	WithKind(string) Error
 	WithStatus(int) Error
+	WithError(error) Error
 }
 
 // FullError is a concrete error that implements the Error interface
@@ -122,6 +123,14 @@ func (e *FullError) WithMessage(format string, args ...interface{}) Error {
 // WithKind sets the error kind.
 func (e *FullError) WithKind(kind string) Error {
 	e.kind = kind
+
+	return e
+}
+
+// WithError wrap source error.
+func (e *FullError) WithError(err error) Error {
+	e.sourceErr = err
+	e.errorMessage = err.Error()
 
 	return e
 }

@@ -38,4 +38,10 @@ func TestErr(t *testing.T) {
 	assert.Equal(t, expectedKind, err.Kind())
 	assert.Equal(t, expectedMessage, err.Message())
 	assert.Equal(t, expectedStatusCode, err.StatusCode())
+
+	otherError := errors.New("this is an another error")
+
+	err = err.WithError(otherError)
+
+	assert.Equal(t, otherError.Error(), err.Error())
 }
