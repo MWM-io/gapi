@@ -6,6 +6,8 @@ import (
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/mwm-io/gapi/config"
 )
 
 // Option is an option to modify the default configuration of the http server.
@@ -94,11 +96,7 @@ func (c serverOptions) Addr() string {
 		return fmt.Sprintf(":%s", c.port)
 	}
 
-	if port := os.Getenv("PORT"); port != "" {
-		return fmt.Sprintf(":%s", port)
-	}
-
-	return ":8080"
+	return fmt.Sprintf(":%s", config.PORT)
 }
 
 func (c serverOptions) AddrHttps() string {
@@ -106,11 +104,7 @@ func (c serverOptions) AddrHttps() string {
 		return fmt.Sprintf(":%s", c.port)
 	}
 
-	if port := os.Getenv("PORT"); port != "" {
-		return fmt.Sprintf(":%s", port)
-	}
-
-	return ":443"
+	return fmt.Sprintf(":%s", config.PORT)
 }
 
 func (c serverOptions) CORS() CORS {

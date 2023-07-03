@@ -34,6 +34,9 @@ type FullError struct {
 	status       int
 	timestamp    time.Time
 	sourceErr    error
+	callerName   string
+	caller       string
+	callstack    []string
 }
 
 // Wrap will wrap the given error and return a new Error.
@@ -42,19 +45,28 @@ func Wrap(err error) Error {
 		return nil
 	}
 
+	if castedErr, ok := err.(Error); ok {
+		return castedErr
+	}
+
 	for _, builder := range errorBuilders {
 		if gErr := builder(err); gErr != nil {
 			return gErr
 		}
 	}
 
+	callerName, caller, callstack := GetCallers()
+
 	newErr := &FullError{
 		userMessage:  err.Error(),
-		kind:         "",
+		kind:         "internal_error",
 		errorMessage: err.Error(),
-		timestamp:    time.Now(),
 		status:       http.StatusInternalServerError,
+		timestamp:    time.Now(),
 		sourceErr:    err,
+		callerName:   callerName,
+		caller:       caller,
+		callstack:    callstack,
 	}
 
 	return newErr

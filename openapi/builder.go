@@ -98,16 +98,23 @@ func (b *DocBuilder) WithBody(body interface{}, options ...BuilderOption) *DocBu
 		b.operation.RequestBodyEns().RequestBodyEns().Description = &c.description
 	}
 
-	if len(c.examples) != 0 {
-		for mimeType, val := range b.operation.RequestBodyEns().RequestBodyEns().Content {
-			for exampleKey, example := range c.examples {
-				val.Examples[exampleKey] = openapi3.ExampleOrRef{
-					Example: &example,
-				}
-			}
-
-			b.operation.RequestBodyEns().RequestBodyEns().Content[mimeType] = val
+	if len(c.examples) == 0 {
+		c.examples = make(map[string]openapi3.Example)
+		exampleName := "default"
+		c.examples[exampleName] = openapi3.Example{
+			Summary: &exampleName,
+			Value:   &body,
 		}
+	}
+
+	for mimeType, val := range b.operation.RequestBodyEns().RequestBodyEns().Content {
+		for exampleKey, example := range c.examples {
+			val.WithExamplesItem(exampleKey, openapi3.ExampleOrRef{
+				Example: &example,
+			})
+		}
+
+		b.operation.RequestBodyEns().RequestBodyEns().WithContentItem(mimeType, val)
 	}
 
 	return b
@@ -116,8 +123,7 @@ func (b *DocBuilder) WithBody(body interface{}, options ...BuilderOption) *DocBu
 // WithBodyExample set an example to request body to the operation
 func (b *DocBuilder) WithBodyExample(value interface{}) *DocBuilder {
 	for mimeType, val := range b.operation.RequestBodyEns().RequestBodyEns().Content {
-		val.WithExample(value)
-		b.operation.RequestBodyEns().RequestBodyEns().Content[mimeType] = val
+		b.operation.RequestBodyEns().RequestBodyEns().WithContentItem(mimeType, *val.WithExample(value))
 	}
 
 	return b
@@ -169,6 +175,16 @@ func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) 
 	resp := b.operation.Responses.MapOfResponseOrRefValues[statusCodeStr]
 	if c.description != "" {
 		resp.ResponseEns().WithDescription(c.description)
+	}
+
+	if len(c.examples) == 0 {
+		c.examples = make(map[string]openapi3.Example)
+		exampleName := "default"
+		c.examples[exampleName] = openapi3.Example{
+			Summary:     &exampleName,
+			Description: &exampleName,
+			Value:       &output,
+		}
 	}
 
 	if len(c.examples) != 0 {
