@@ -91,6 +91,7 @@ func newOptions(opts ...Option) serverOptions {
 	return c
 }
 
+// Addr returns the server address to listen to.
 func (c serverOptions) Addr() string {
 	if c.port != "" {
 		return fmt.Sprintf(":%s", c.port)
@@ -99,6 +100,7 @@ func (c serverOptions) Addr() string {
 	return fmt.Sprintf(":%s", config.PORT)
 }
 
+// AddrHttps returns the server address to listen to.
 func (c serverOptions) AddrHttps() string {
 	if c.port != "" {
 		return fmt.Sprintf(":%s", c.port)
@@ -107,6 +109,7 @@ func (c serverOptions) AddrHttps() string {
 	return fmt.Sprintf(":%s", config.PORT)
 }
 
+// CORS returns the CORS configuration.
 func (c serverOptions) CORS() CORS {
 	if c.cors != nil {
 		return *c.cors
@@ -119,6 +122,7 @@ func (c serverOptions) CORS() CORS {
 	}
 }
 
+// StopTimeout returns the time to wait for before shutting down the server.
 func (c serverOptions) StopTimeout() time.Duration {
 	if c.stopTimeout != nil {
 		return *c.stopTimeout
@@ -127,6 +131,7 @@ func (c serverOptions) StopTimeout() time.Duration {
 	return 3 * time.Second
 }
 
+// StopSignals returns the signals to listen to for shutting down the server.
 func (c serverOptions) StopSignals() []os.Signal {
 	if len(c.stopSignals) != 0 {
 		return c.stopSignals
@@ -135,10 +140,12 @@ func (c serverOptions) StopSignals() []os.Signal {
 	return []os.Signal{os.Interrupt, syscall.SIGINT, syscall.SIGTERM}
 }
 
+// StrictSlash returns the strictSlash configuration.
 func (c serverOptions) StrictSlash() bool {
 	return !c.withoutStrictSlash
 }
 
+// Context returns the parent context for the *http.Server.
 func (c serverOptions) Context() context.Context {
 	if c.context != nil {
 		return c.context

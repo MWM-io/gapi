@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 
@@ -175,7 +174,7 @@ func (m ResponseWriter) resolveContentType(r *http.Request) (string, Encoder, er
 	if m.ForcedContentType != "" {
 		encoder, ok := m.Encoders[m.ForcedContentType]
 		if !ok {
-			return "", nil, errors.Err(fmt.Sprintf("no content encoder found for content type %s", m.ForcedContentType))
+			return "", nil, errors.Err("missing_encoder", "no content encoder found for content type %s", m.ForcedContentType)
 		}
 
 		return m.ForcedContentType, encoder, nil
@@ -193,7 +192,7 @@ func (m ResponseWriter) resolveContentType(r *http.Request) (string, Encoder, er
 	for mediaType := range m.Encoders {
 		parsedMediaType, err := contenttype.ParseMediaType(mediaType)
 		if err != nil {
-			return "", nil, errors.Wrap(err).WithMessage(fmt.Sprintf("invalid mediaType %s", mediaType)).WithStatus(http.StatusInternalServerError)
+			return "", nil, errors.UnsupportedMediaType("unsupported_content_type", "invalid mediaType %s", mediaType).WithError(err)
 		}
 
 		availableTypes = append(availableTypes, parsedMediaType)
@@ -201,12 +200,12 @@ func (m ResponseWriter) resolveContentType(r *http.Request) (string, Encoder, er
 
 	accepted, _, err := contenttype.GetAcceptableMediaType(r, availableTypes)
 	if err != nil {
-		return "", nil, errors.Wrap(err).WithMessage(fmt.Sprintf("no content-type found to match the accept header %s", r.Header.Get("Accept"))).WithStatus(http.StatusUnsupportedMediaType)
+		return "", nil, errors.UnsupportedMediaType("unsupported_content_type", "no content-type found to match the accept header %s", r.Header.Get("Accept")).WithError(err)
 	}
 
 	encoder, ok := m.Encoders[accepted.String()]
 	if !ok {
-		return "", nil, errors.Err(fmt.Sprintf("no content encoder found for content type %s", accepted.String()))
+		return "", nil, errors.ExpectationFailed("unsupported_accepted_response_types", "no content encoder found for content type %s", accepted.String())
 	}
 
 	return accepted.String(), encoder, nil

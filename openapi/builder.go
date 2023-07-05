@@ -216,7 +216,7 @@ func (b *DocBuilder) WithError(statusCode int, kind, message string, options ...
 
 	c.applyOptions(options...)
 
-	exampleValue := errors.Err(message).WithKind(kind).WithStatus(statusCode)
+	exampleValue := errors.Err(kind, message).WithStatus(statusCode)
 
 	if err := b.reflector.SetJSONResponse(b.operation, exampleValue, statusCode); err != nil {
 		b.err = append(b.err, err)

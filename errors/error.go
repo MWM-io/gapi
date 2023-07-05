@@ -19,6 +19,9 @@ type Error interface {
 	Kind() string
 	StatusCode() int
 	Timestamp() time.Time
+	CallerName() string
+	Caller() string
+	Callstack() []string
 
 	WithMessage(format string, args ...interface{}) Error
 	WithKind(string) Error
@@ -73,15 +76,20 @@ func Wrap(err error) Error {
 }
 
 // Err creates a new Error.
-func Err(format string, args ...interface{}) Error {
+func Err(kind, format string, args ...interface{}) Error {
 	message := fmt.Sprintf(format, args...)
+
+	callerName, caller, callstack := GetCallers()
 
 	return &FullError{
 		userMessage:  message,
-		kind:         "",
+		kind:         kind,
 		errorMessage: message,
 		timestamp:    time.Now(),
 		status:       http.StatusInternalServerError,
+		callerName:   callerName,
+		caller:       caller,
+		callstack:    callstack,
 	}
 }
 
@@ -146,6 +154,28 @@ func (e *FullError) WithError(err error) Error {
 
 	return e
 }
+
+// CallerName implements the error interface.
+// It will return the name of the function that created the error
+func (e *FullError) CallerName() string {
+	return e.callerName
+}
+
+// Caller implements the error interface.
+// It will return the name of the function that created the error
+func (e *FullError) Caller() string {
+	return e.callerName
+}
+
+// Callstack implements the error interface.
+// It will return the complete callstack of the error creation
+func (e *FullError) Callstack() []string {
+	return e.callstack
+}
+
+// CallerName() string
+// Caller() string
+// Callstack() []string
 
 // HttpError is used to json.Marshal or xml.Marshal FullError.
 // You can use it to decode an incoming error.

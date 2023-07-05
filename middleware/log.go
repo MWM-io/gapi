@@ -23,7 +23,7 @@ func (m Log) Wrap(h handler.Handler) handler.Handler {
 		resp, err := h.Serve(w, r)
 
 		if err != nil {
-			gLog.Error(r.Context(), err.Error())
+			gLog.Error(r.Context()).LogError(err)
 		}
 
 		return resp, err

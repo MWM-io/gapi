@@ -19,10 +19,10 @@ func main() {
 	server.AddHandlerFactory(r, "GET", "/path-params/{first}/{second}", internal.NewPathParamsHandler)
 	server.AddHandlerFactory(r, "GET", "/query-params", internal.NewQueryParamsHandler)
 
-	gLog.Info(ctx, "Starting http server")
+	gLog.Info(ctx).LogMsg("Starting http server")
 	if err := server.ServeAndHandleShutdown(r); err != nil {
-		gLog.Emergency(ctx, err.Error())
+		gLog.Error(ctx).LogError(err)
 	}
 
-	gLog.Info(ctx, "Server stopped")
+	gLog.Info(ctx).LogMsg("Server stopped")
 }

@@ -25,6 +25,7 @@ type bodyWithValidationHandler struct {
 	body OrderBody
 }
 
+// OrderBody : struct that represent the body used by bodyWithValidationHandler
 type OrderBody struct {
 	// The required tag validates that the value is not the data types default zero value
 	// For numbers ensures value is not zero. For strings ensures value is not "".
@@ -34,9 +35,11 @@ type OrderBody struct {
 	Quantity int `json:"quantity"`
 }
 
+// Validate is an implementation of middleware.BodyValidation. If user UserBody is given to
+// middleware.Body, this function was called automatically and error handled
 func (b *OrderBody) Validate() error {
 	if b.Quantity < 5 || b.Quantity > 10 {
-		return errors.Err("quantity must be between 5 & 10").WithStatus(http.StatusBadRequest)
+		return errors.BadRequest("invalid_quantity", "quantity must be between 5 & 10")
 	}
 
 	return nil

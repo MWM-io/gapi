@@ -18,3 +18,5 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/mwm-io/gapi => ../../

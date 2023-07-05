@@ -34,58 +34,66 @@ func (l *Log) LogMsg(format string, a ...any) {
 }
 
 // LogError take a GAPI error, format error message and log it
-func (l *Log) LogError(err errors.Error) {
+func (l *Log) LogError(err error) {
+	castedErr, ok := err.(errors.Error)
+	if !ok {
+		l.LogMsg(err.Error())
+		return
+	}
+
 	l.With(
-		zap.String("kind", err.Kind()),
-		zap.String("callstack", err.Callstack()),
-	).LogMsg(err.Error())
+		zap.String("kind", castedErr.Kind()),
+		zap.Strings("callstack", castedErr.Callstack()),
+		zap.String("caller", castedErr.Caller()),
+		zap.String("caller_name", castedErr.CallerName()),
+	).LogMsg(castedErr.Error())
 }
 
 // Debug logs a debug message with additional zap.Field
-func Debug(ctx context.Context) Log {
-	return Log{
+func Debug(ctx context.Context) *Log {
+	return &Log{
 		f: Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Debug,
 	}
 }
 
 // Info logs an info message with additional zap.Field
-func Info(ctx context.Context) Log {
-	return Log{
+func Info(ctx context.Context) *Log {
+	return &Log{
 		f: Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Info,
 	}
 }
 
 // Warn logs a warning message with additional zap.Field
-func Warn(ctx context.Context) Log {
-	return Log{
+func Warn(ctx context.Context) *Log {
+	return &Log{
 		f: Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Warn,
 	}
 }
 
 // Error logs an error message with additional zap.Field
-func Error(ctx context.Context) Log {
-	return Log{
+func Error(ctx context.Context) *Log {
+	return &Log{
 		f: Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Error,
 	}
 }
 
 // Critical logs a critical message with additional zap.Field
-func Critical(ctx context.Context) Log {
-	return Log{
+func Critical(ctx context.Context) *Log {
+	return &Log{
 		f: Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Panic,
 	}
 }
 
 // Alert logs an alert message with additional zap.Field
-func Alert(ctx context.Context) Log {
-	return Log{
+func Alert(ctx context.Context) *Log {
+	return &Log{
 		f: Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Panic,
 	}
 }
 
 // Emergency logs an emergency message with additional zap.Field
-func Emergency(ctx context.Context) Log {
-	return Log{
+func Emergency(ctx context.Context) *Log {
+	return &Log{
 		f: Logger(ctx).WithOptions(zap.AddCallerSkip(1)).Fatal,
 	}
 }

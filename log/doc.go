@@ -8,14 +8,14 @@ This global logger can be overridden with your own zap.Logger
 
 ### Public methods
 
-Gapi logging expose a list of public methods to print logs for various logging levels:
-- log.Debug(msg string, fields ...zap.Field)
-- log.Info(msg string, fields ...zap.Field)
-- log.Warn(msg string, fields ...zap.Field)
-- log.Error(msg string, fields ...zap.Field)
-- log.Critical(msg string, fields ...zap.Field)
-- log.Alert(msg string, fields ...zap.Field)
-- log.Emergency(msg string, fields ...zap.Field)
+Gapi logging expose a list of public methods to get logger with various logging levels:
+- log.Debug(ctx context.Context)
+- log.Info(ctx context.Context)
+- log.Warn(ctx context.Context)
+- log.Error(ctx context.Context)
+- log.Critical(ctx context.Context)
+- log.Alert(ctx context.Context)
+- log.Emergency(ctx context.Context)
 
 	import (
 		"github.com/mwm-io/gapi/handler"
@@ -28,12 +28,12 @@ Gapi logging expose a list of public methods to print logs for various logging l
 
 		server.AddHandler(r, "GET", "/", handler.Func(HelloWorldHandler))
 
-		gLog.Info("Starting http server")
+		gLog.Info(context.Background()).LogMsg("Starting http server")
 		if err := server.ServeAndHandleShutdown(r); err != nil {
-			gLog.Error(err)
+			gLog.Error(context.Background()).LogError(err)
 		}
 
-		gLog.Info("Server stopped")
+		gLog.Info(context.Background()).LogMsg("Server stopped")
 	}
 
 ### Global instance

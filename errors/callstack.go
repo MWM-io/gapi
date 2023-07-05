@@ -13,7 +13,7 @@ func GetCallers() (callerName, caller string, callStack []string) {
 	n := runtime.Callers(1, pc)
 	if n == 0 {
 		// No pcs available. Stop now.
-		// This can happen if the first argument to runtime.Callers is large.
+		// This can happen if the first argument to runtime.Callers are large.
 		caller = "unknown"
 		return
 	}
@@ -30,13 +30,14 @@ func GetCallers() (callerName, caller string, callStack []string) {
 			break
 		}
 
-		// we don't want to print the http stack
-		if !firstFrame && strings.Contains(frame.File, "mwm-io/server") {
+		// Stop call stack when we reach the handler caller
+		// every call after this is not relevant
+		if !firstFrame && strings.Contains(frame.File, "github.com/mwm-io/gapi") && strings.Contains(frame.File, "/handler/") {
 			break
 		}
 
-		if strings.Contains(frame.File, "mwm-io/log") ||
-			strings.Contains(frame.File, "mwm-io/errors") {
+		// Ignore errors package from call trace because all errors was created from this package
+		if strings.Contains(frame.File, "github.com/mwm-io/gapi") && strings.Contains(frame.File, "/errors/") {
 			continue
 		}
 
@@ -57,7 +58,7 @@ func formatFrame(frame runtime.Frame) string {
 	line := frame.Line
 	function := frame.Function
 
-	return fmt.Sprintf("%s:%s: %s", file, itoa(line, -1), function)
+	return fmt.Sprintf("%s:%s -> %s", file, itoa(line, -1), function)
 }
 
 // Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.

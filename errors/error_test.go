@@ -30,9 +30,7 @@ func TestErr(t *testing.T) {
 	expectedMessage := "this is my error"
 	expectedStatusCode := http.StatusInternalServerError
 
-	err := Err("this is my error").
-		WithMessage(expectedMessage).
-		WithKind(expectedKind).
+	err := Err(expectedKind, expectedMessage).
 		WithStatus(expectedStatusCode)
 
 	assert.Equal(t, expectedKind, err.Kind())

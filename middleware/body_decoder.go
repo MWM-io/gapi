@@ -87,12 +87,13 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 		}
 
 		if reflect.ValueOf(m.BodyPtr).Kind() != reflect.Ptr {
-			return nil, errors.Err("BodyPtr must be a pointer")
+			return nil, errors.Err("invalid_body_receiver", "BodyPtr must be a pointer")
 		}
 
 		unmarshaler, err := m.resolveContentType(r)
 		if err != nil {
-			return nil, errors.Wrap(err).WithMessage("unable to resolve content type").WithStatus(http.StatusBadRequest)
+			return nil, errors.BadRequest("invalid_content_type", "unable to resolve content type").
+				WithError(err)
 		}
 
 		var buffer bytes.Buffer
@@ -104,11 +105,13 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 
 		body, err := io.ReadAll(reader)
 		if err != nil {
-			return nil, errors.Wrap(err).WithMessage("failed to read body").WithStatus(http.StatusBadRequest)
+			return nil, errors.BadRequest("body_error", "failed to read body").
+				WithError(err)
 		}
 
 		if errUnmarshal := unmarshaler.Unmarshal(body, m.BodyPtr); errUnmarshal != nil {
-			return nil, errors.Wrap(errUnmarshal).WithMessage("failed to unmarshal body").WithStatus(http.StatusBadRequest)
+			return nil, errors.BadRequest("invalid_body_format", "failed to decode body").
+				WithError(errUnmarshal)
 		}
 
 		r.Body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
@@ -132,10 +135,10 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 				fieldName := typeOfFieldI.Name
 				switch jsonTag := typeOfFieldI.Tag.Get("json"); jsonTag {
 				case "-":
-					return nil, errors.Err("cannot have an omitted field required").WithStatus(http.StatusBadRequest)
+					return nil, errors.InternalServerError("invalid_config", "field '%s' is required but json tag value is '-'", fieldName)
 
 				case "":
-					return nil, errors.Err("field %s is required", fieldName).WithStatus(http.StatusBadRequest)
+					return nil, errors.BadRequest("missing_param", "field %s is required", fieldName)
 
 				default:
 					parts := strings.Split(jsonTag, ",")
@@ -144,14 +147,18 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 						name = fieldName
 					}
 
-					return nil, errors.Err("field %s is required", name).WithStatus(http.StatusBadRequest)
+					return nil, errors.BadRequest("missing_param", "field %s is required", name)
 				}
 			}
 		}
 
 		if v, ok := m.BodyPtr.(BodyValidation); !m.SkipValidation && ok {
 			if errValidate := v.Validate(); errValidate != nil {
-				return nil, errors.Wrap(errValidate).WithStatus(http.StatusBadRequest)
+				if castedErr, casted := errValidate.(errors.Error); casted {
+					return nil, castedErr
+				}
+
+				return nil, errors.BadRequest("invalid_body", errValidate.Error())
 			}
 		}
 
@@ -176,7 +183,7 @@ func (m BodyDecoder) resolveContentType(r *http.Request) (Decoder, error) {
 	if m.ForcedContentType != "" {
 		result, ok := m.Decoders[m.ForcedContentType]
 		if !ok {
-			return nil, errors.Err("no content decoder found for content type %s", m.ForcedContentType)
+			return nil, errors.UnsupportedMediaType("unsupported_content_type", "no decoder found for content type %s", m.ForcedContentType)
 		}
 
 		return result, nil
@@ -189,7 +196,8 @@ func (m BodyDecoder) resolveContentType(r *http.Request) (Decoder, error) {
 
 	wantedType, _, errContent := mime.ParseMediaType(contentType)
 	if errContent != nil {
-		return nil, errors.Wrap(errContent).WithMessage("unknown content-type %s", contentType)
+		return nil, errors.UnsupportedMediaType("unsupported_content_type", "unknown content-type %s", contentType).
+			WithError(errContent)
 	}
 
 	if wantedType == "" {
@@ -198,7 +206,7 @@ func (m BodyDecoder) resolveContentType(r *http.Request) (Decoder, error) {
 
 	result, ok := m.Decoders[wantedType]
 	if !ok || result == nil {
-		return nil, errors.Err("unsupported content-type %s", wantedType)
+		return nil, errors.UnsupportedMediaType("unsupported_content_type", "unsupported content-type %s", wantedType)
 	}
 
 	return result, nil

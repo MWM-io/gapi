@@ -31,6 +31,7 @@ func (p WithMiddlewares) Middlewares() []Middleware {
 // ByWeight sorts a list of Middleware by Weight
 type ByWeight []Middleware
 
+// Len returns the length of the list
 func (b ByWeight) Len() int {
 	return len(b)
 }
