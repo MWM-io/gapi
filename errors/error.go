@@ -150,7 +150,9 @@ func (e *FullError) WithKind(kind string) Error {
 // WithError wrap source error.
 func (e *FullError) WithError(err error) Error {
 	e.sourceErr = err
-	e.errorMessage = err.Error()
+	if e.errorMessage == "" {
+		e.errorMessage = err.Error()
+	}
 
 	return e
 }
