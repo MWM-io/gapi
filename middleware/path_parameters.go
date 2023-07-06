@@ -31,7 +31,7 @@ func (m PathParameters) Wrap(h handler.Handler) handler.Handler {
 			pathParam := typeOfParameters.Field(i).Tag.Get("path")
 			val, ok := mux.Vars(r)[pathParam]
 			if !ok {
-				return nil, errors.Err("unknown path params").WithStatus(http.StatusInternalServerError)
+				return nil, errors.Err("invalid_param_type", "unknown path params").WithStatus(http.StatusInternalServerError)
 			}
 
 			field := v.FieldByName(typeOfParameters.Field(i).Name)
@@ -39,14 +39,16 @@ func (m PathParameters) Wrap(h handler.Handler) handler.Handler {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				x, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					return nil, errors.Wrap(err).WithMessage("%s must be a number", typeOfParameters.Field(i).Name).WithStatus(http.StatusBadRequest)
+					return nil, errors.BadRequest("invalid_param_type", "%s must be a number", typeOfParameters.Field(i).Name).
+						WithError(err)
 				}
 				field.SetInt(x)
 
 			case reflect.Float64, reflect.Float32:
 				x, err := strconv.ParseFloat(val, 64)
 				if err != nil {
-					return nil, errors.Wrap(err).WithMessage("%s must be a float", typeOfParameters.Field(i).Name).WithStatus(http.StatusBadRequest)
+					return nil, errors.BadRequest("invalid_param_type", "%s must be a float", typeOfParameters.Field(i).Name).
+						WithError(err)
 				}
 				field.SetFloat(x)
 
@@ -57,13 +59,13 @@ func (m PathParameters) Wrap(h handler.Handler) handler.Handler {
 				if reflect.TypeOf(i) == reflect.TypeOf([]byte(nil)) {
 					field.SetBytes([]byte(val))
 				} else {
-					return nil, errors.Err("cannot have a slice in parameters").WithStatus(http.StatusBadRequest)
+					return nil, errors.PreconditionFailed("invalid_param_type", "path params can't be a slice. Caused by parameter '%s'", pathParam)
 				}
 
 			case reflect.String:
 				field.SetString(val)
 			default:
-				return nil, errors.Err("cannot have a parameter with %q type", field.Kind().String()).WithStatus(http.StatusBadRequest)
+				return nil, errors.PreconditionFailed("invalid_param_type", "type %q isn't supported. Caused by parameter '%s'", pathParam, field.Kind().String()).WithStatus(http.StatusBadRequest)
 			}
 		}
 

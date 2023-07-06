@@ -26,7 +26,6 @@ type jsonResponseHandler struct {
 
 // Serve implements handler.Handler and is the function called when a request is handled
 func (h jsonResponseHandler) Serve(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return nil, errors.Err("Hello World").
-		WithKind("example").
+	return nil, errors.Err("example", "Hello World").
 		WithStatus(http.StatusTeapot)
 }

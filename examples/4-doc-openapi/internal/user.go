@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 
@@ -28,7 +26,7 @@ type UserBody struct {
 // middleware.Body, this function was called automatically and error handled
 func (u UserBody) Validate() error {
 	if u.Name == "" {
-		return errors.Err("name required").WithStatus(http.StatusPreconditionFailed)
+		return errors.PreconditionFailed("missing_name", "name required")
 	}
 
 	return nil
@@ -64,6 +62,7 @@ var users = []User{
 	},
 }
 
+// GetByID returns the user with the given ID, or an error if not found.
 func GetByID(id int) (User, error) {
 	usersMu.RLock()
 	defer usersMu.RUnlock()
@@ -74,11 +73,10 @@ func GetByID(id int) (User, error) {
 		}
 	}
 
-	return User{}, errors.Err(fmt.Sprintf("user not found for id %d", id)).
-		WithKind("not_found").
-		WithStatus(http.StatusNotFound)
+	return User{}, errors.NotFound("user_not_found", "user not found for id %d", id)
 }
 
+// Search returns the users whose name contains the given string.
 func Search(name string) ([]User, error) {
 	usersMu.RLock()
 	defer usersMu.RUnlock()
@@ -93,6 +91,7 @@ func Search(name string) ([]User, error) {
 	return results, nil
 }
 
+// Save saves the given user, assigning it a new ID if it is a new user.
 func Save(user User) (User, error) {
 	usersMu.Lock()
 	defer usersMu.Unlock()
@@ -120,6 +119,7 @@ func Save(user User) (User, error) {
 	return user, nil
 }
 
+// Delete deletes the user with the given ID, or returns an error if not found.
 func Delete(id int) error {
 	usersMu.RLock()
 	defer usersMu.RUnlock()
@@ -132,7 +132,5 @@ func Delete(id int) error {
 		}
 	}
 
-	return errors.Err(fmt.Sprintf("user not found for id %d", id)).
-		WithKind("not_found").
-		WithStatus(http.StatusNotFound)
+	return errors.NotFound("user_not_found", "user not found for id %d", id)
 }

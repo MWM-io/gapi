@@ -22,10 +22,10 @@ func main() {
 	server.AddHandler(r, "GET", "/error/xml", err.MakeXMLResponseHandler())
 	server.AddHandler(r, "GET", "/error/auto", err.MakeAutoResponseHandler())
 
-	gLog.Info(ctx, "Starting http server")
+	gLog.Info(ctx).LogMsg("Starting http server")
 	if errServe := server.ServeAndHandleShutdown(r); errServe != nil {
-		gLog.Emergency(ctx, errServe.Error())
+		gLog.Error(ctx).LogError(errServe)
 	}
 
-	gLog.Info(ctx, "Server stopped")
+	gLog.Info(ctx).LogMsg("Server stopped")
 }

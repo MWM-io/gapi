@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/mwm-io/gapi/errors"
@@ -16,7 +15,7 @@ func (r Recover) Wrap(h handler.Handler) handler.Handler {
 	return handler.Func(func(w http.ResponseWriter, r *http.Request) (result interface{}, err error) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				err = errors.Err(fmt.Sprintf("Panic: %v", rec)).WithStatus(http.StatusInternalServerError)
+				err = errors.InternalServerError("panic", "Panic: %v", rec)
 			}
 		}()
 

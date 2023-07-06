@@ -28,7 +28,8 @@ func (m QueryParameters) Wrap(h handler.Handler) handler.Handler {
 		decoder.SetAliasTag("query")
 		err := decoder.Decode(m.Parameters, r.URL.Query())
 		if err != nil {
-			return nil, errors.Wrap(err).WithMessage("decoder.Decode() failed")
+			return nil, errors.UnprocessableEntity("query_params_encoding", "failed to decode query params").
+				WithError(err)
 		}
 
 		return h.Serve(w, r)
