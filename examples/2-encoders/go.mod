@@ -2,7 +2,7 @@ module github.com/mwm-io/gapi/examples/2-encoders
 
 go 1.19
 
-require github.com/mwm-io/gapi v0.2.0
+require github.com/mwm-io/gapi v0.2.4
 
 require (
 	github.com/elnormous/contenttype v1.0.3 // indirect
@@ -18,5 +18,3 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
-
-replace github.com/mwm-io/gapi => ../../
