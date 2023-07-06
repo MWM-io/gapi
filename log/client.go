@@ -46,6 +46,8 @@ func (l *Log) LogError(err error) {
 		zap.Strings("callstack", castedErr.Callstack()),
 		zap.String("caller", castedErr.Caller()),
 		zap.String("caller_name", castedErr.CallerName()),
+		zap.String("original_error", castedErr.Unwrap().Error()),
+		// TODO : if original_error is a GAPI error, log with call original callstack
 	).LogMsg(castedErr.Error())
 }
 
