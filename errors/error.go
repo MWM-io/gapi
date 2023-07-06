@@ -175,10 +175,6 @@ func (e *FullError) Callstack() []string {
 	return e.callstack
 }
 
-// CallerName() string
-// Caller() string
-// Callstack() []string
-
 // HttpError is used to json.Marshal or xml.Marshal FullError.
 // You can use it to decode an incoming error.
 type HttpError struct {

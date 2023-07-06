@@ -43,7 +43,7 @@ func GetCallers() (callerName, caller string, callStack []string) {
 
 		if firstFrame {
 			caller = formatFrame(frame)
-			callerName = frame.Function
+			callerName = frame.Func.Name()
 			firstFrame = false
 		} else {
 			callStack = append(callStack, formatFrame(frame))
