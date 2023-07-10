@@ -41,13 +41,15 @@ func (l *Log) LogError(err error) {
 		return
 	}
 
+	if originalErr := castedErr.Unwrap(); originalErr != nil {
+		l.With(zap.String("original_error", castedErr.Unwrap().Error()))
+		// TODO : if original_error is a GAPI error, log with call original callstack
+	}
 	l.With(
 		zap.String("kind", castedErr.Kind()),
 		zap.Strings("callstack", castedErr.Callstack()),
 		zap.String("caller", castedErr.Caller()),
 		zap.String("caller_name", castedErr.CallerName()),
-		zap.String("original_error", castedErr.Unwrap().Error()),
-		// TODO : if original_error is a GAPI error, log with call original callstack
 	).LogMsg(castedErr.Error())
 }
 
