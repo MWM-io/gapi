@@ -132,6 +132,10 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 						return nil, errors.InternalServerError("pattern_must_be_regex", "pattern must contain a regular expression")
 					}
 
+					if !val.Field(i).CanInterface() {
+						return nil, errors.InternalServerError("interface_failed", "interface cannot be used without panicking")
+					}
+
 					fieldValue := val.Field(i).Interface()
 					if !rex.MatchString(fmt.Sprintf("%v", fieldValue)) {
 						return nil, errors.BadRequest("body_validation_failed", "field %s does not match the required pattern", typeOfFieldI.Name)
