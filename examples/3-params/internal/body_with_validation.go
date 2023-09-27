@@ -30,7 +30,9 @@ type OrderBody struct {
 	// The required tag validates that the value is not the data types default zero value
 	// For numbers ensures value is not zero. For strings ensures value is not "".
 	// For slices, maps, pointers, interfaces, channels and functions ensures the value is not nil.
-	ProductID string `json:"product_id" required:"true"`
+	// You can add validation using the pattern tag which is a regexp condition
+	// that the value of the field product_id must follow works also for float and integer
+	ProductID string `json:"product_id" required:"true" pattern:"^product_[\\d_]+"`
 	// if you want to make a custom validation you can implement Validate() as the example bellow for quantity.
 	Quantity int `json:"quantity"`
 }

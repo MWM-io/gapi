@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/mwm-io/gapi/errors"
@@ -123,6 +125,18 @@ func (m BodyDecoder) Wrap(h handler.Handler) handler.Handler {
 			for i := 0; i < val.NumField(); i++ {
 				typeOfParameters := val.Type()
 				typeOfFieldI := typeOfParameters.Field(i)
+
+				if pattern := typeOfFieldI.Tag.Get("pattern"); pattern != "" {
+					rex, errC := regexp.Compile(pattern)
+					if errC != nil {
+						return nil, errors.InternalServerError("pattern_must_be_regex", "pattern must contain a regular expression")
+					}
+
+					fieldValue := val.Field(i).Interface()
+					if !rex.MatchString(fmt.Sprintf("%v", fieldValue)) {
+						return nil, errors.BadRequest("body_validation_failed", "field %s does not match the required pattern", typeOfFieldI.Name)
+					}
+				}
 
 				if typeOfFieldI.Tag.Get("required") != "true" {
 					continue
