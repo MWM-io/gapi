@@ -189,7 +189,7 @@ func validateStruct(val reflect.Value) errors.Error {
 		typeOfFieldI := typeOfParameters.Field(i)
 
 		if !val.Field(i).CanInterface() {
-			return errors.InternalServerError("can_interface_failed", "interface for field %s cannot be used without panicking", typeOfFieldI.Name)
+			continue
 		}
 
 		// pattern validation
