@@ -6,6 +6,7 @@ import (
 	"github.com/swaggest/openapi-go/openapi3"
 
 	"github.com/mwm-io/gapi/errors"
+	"github.com/mwm-io/gapi/utils"
 )
 
 // DocBuilder is a builder to simplify the documentation of an operation
@@ -64,6 +65,8 @@ func (b *DocBuilder) Error() error {
 // WithSummary set a Summary (Title) to the operation
 func (b *DocBuilder) WithSummary(summary string) *DocBuilder {
 	b.operation.WithSummary(summary)
+	defaultOperationID := utils.GenerateOperationID("/" + b.httpMethod + b.path)
+	b.operation.ID = &defaultOperationID
 	return b
 }
 
@@ -237,5 +240,11 @@ func (b *DocBuilder) WithError(statusCode int, kind, message string, options ...
 
 	b.operation.Responses.WithMapOfResponseOrRefValuesItem(statusCodeStr, resp)
 
+	return b
+}
+
+// WithOperationID set an operationID to the operation
+func (b *DocBuilder) WithOperationID(operationID string) *DocBuilder {
+	b.operation.ID = &operationID
 	return b
 }
