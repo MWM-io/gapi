@@ -159,6 +159,7 @@ func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) 
 
 	if output == nil {
 		c.statusCode = 204
+		c.mimeType = ""
 	}
 
 	c.applyOptions(options...)
@@ -180,7 +181,7 @@ func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) 
 		resp.ResponseEns().WithDescription(c.description)
 	}
 
-	if len(c.examples) == 0 {
+	if len(c.examples) == 0 && output != nil {
 		c.examples = make(map[string]openapi3.Example)
 		exampleName := "default"
 		c.examples[exampleName] = openapi3.Example{
@@ -190,7 +191,7 @@ func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) 
 		}
 	}
 
-	if len(c.examples) != 0 {
+	if len(c.examples) != 0 && output != nil {
 		contentResp := resp.ResponseEns().Content[c.mimeType]
 
 		for key, item := range c.examples {
@@ -212,6 +213,7 @@ func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) 
 // - WithDescription to add a description to error response
 func (b *DocBuilder) WithError(statusCode int, kind, message string, options ...BuilderOption) *DocBuilder {
 	c := builderOptions{
+		examples:    nil,
 		statusCode:  statusCode,
 		description: message,
 		mimeType:    "application/json",
@@ -219,9 +221,18 @@ func (b *DocBuilder) WithError(statusCode int, kind, message string, options ...
 
 	c.applyOptions(options...)
 
-	exampleValue := errors.Err(kind, message).WithStatus(statusCode)
-
-	if err := b.reflector.SetJSONResponse(b.operation, exampleValue, statusCode); err != nil {
+	exampleValue := errors.HttpError{
+		Message: message,
+		Kind:    kind,
+	}
+	err := b.reflector.SetupResponse(openapi3.OperationContext{
+		Operation:         b.operation,
+		Output:            exampleValue,
+		HTTPStatus:        c.statusCode,
+		RespContentType:   c.mimeType,
+		RespHeaderMapping: c.headers,
+	})
+	if err != nil {
 		b.err = append(b.err, err)
 	}
 
