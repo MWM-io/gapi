@@ -164,9 +164,9 @@ func (e *FullError) CallerName() string {
 }
 
 // Caller implements the error interface.
-// It will return the name of the function that created the error
+// It will return the formatted frame (file:line -> function) of the function that created the error
 func (e *FullError) Caller() string {
-	return e.callerName
+	return e.caller
 }
 
 // Callstack implements the error interface.

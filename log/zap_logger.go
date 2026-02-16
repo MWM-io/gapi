@@ -57,11 +57,12 @@ func defaultConfig() *zap.Config {
 	}
 
 	return &zap.Config{
-		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
-		Encoding:         encoding,
-		EncoderConfig:    encoderConfig,
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
+		Level:             zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		Encoding:          encoding,
+		EncoderConfig:     encoderConfig,
+		OutputPaths:       []string{"stdout"},
+		ErrorOutputPaths:  []string{"stderr"},
+		DisableStacktrace: true,
 	}
 }
 
