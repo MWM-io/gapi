@@ -147,6 +147,15 @@ func (m BodyDecoder) Doc(builder *openapi.DocBuilder) error {
 		builder.WithBody(m.BodyPtr, openapi.WithMimeType(contentType))
 	}
 
+	builder.
+		WithError(400, "invalid_content_type", "Unable to resolve content type").
+		WithError(400, "body_error", "Failed to read request body").
+		WithError(400, "invalid_body_format", "Failed to decode request body").
+		WithError(400, "missing_param", "A required field is missing").
+		WithError(400, "body_validation_failed", "A field does not match the required pattern").
+		WithError(400, "enum_validation_failed", "A field value is not in the allowed enum values").
+		WithError(400, "invalid_body", "Body validation failed")
+
 	return builder.Error()
 }
 

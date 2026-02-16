@@ -41,5 +41,6 @@ func TestErr(t *testing.T) {
 
 	err = err.WithError(otherError)
 
-	assert.Equal(t, otherError.Error(), err.Error())
+	assert.Equal(t, expectedMessage, err.Error(), "WithError should not override an explicit error message")
+	assert.Equal(t, otherError, errors.Unwrap(err), "WithError should set the source error for debug/logging")
 }

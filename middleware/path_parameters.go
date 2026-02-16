@@ -79,5 +79,9 @@ func (m PathParameters) Doc(builder *openapi.DocBuilder) error {
 		return nil
 	}
 
-	return builder.WithParams(m.Parameters).Error()
+	builder.
+		WithParams(m.Parameters).
+		WithError(400, "invalid_param_type", "A path parameter has an invalid type")
+
+	return builder.Error()
 }
