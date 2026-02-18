@@ -3,6 +3,8 @@ package middleware
 import (
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/mwm-io/gapi/handler"
 	gLog "github.com/mwm-io/gapi/log"
 )
@@ -18,12 +20,16 @@ func (m Log) Wrap(h handler.Handler) handler.Handler {
 		ctx := r.Context()
 		l := gLog.Logger(ctx)
 
+		ctx = gLog.NewRefContext(ctx, l)
 		r = r.WithContext(gLog.NewContext(ctx, l))
 
 		resp, err := h.Serve(w, r)
 
 		if err != nil {
-			gLog.Error(r.Context()).LogError(err)
+			latest := gLog.LatestLogger(r.Context())
+			errLog := &gLog.Log{}
+			errLog.SetFunc(latest.WithOptions(zap.AddCallerSkip(1)).Error)
+			errLog.LogError(err)
 		}
 
 		return resp, err

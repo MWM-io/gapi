@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -14,6 +15,12 @@ type Log struct {
 	// Chosen function according to severity
 	f      func(string, ...zap.Field)
 	fields []zap.Field
+}
+
+// SetFunc sets the log function for this Log instance.
+// This is used when creating a Log from a specific logger (e.g. from LatestLogger).
+func (l *Log) SetFunc(f func(string, ...zap.Field)) {
+	l.f = f
 }
 
 // With returns a new Log with additional zap.Field
@@ -42,14 +49,21 @@ func (l *Log) LogError(err error) {
 	}
 
 	if originalErr := castedErr.Unwrap(); originalErr != nil {
-		l.With(zap.String("original_error", castedErr.Unwrap().Error()))
-		// TODO : if original_error is a GAPI error, log with call original callstack
+		l.With(zap.String("original_error", originalErr.Error()))
 	}
+
+	var stackParts []string
+	if caller := castedErr.Caller(); caller != "" {
+		stackParts = append(stackParts, caller)
+	}
+	stackParts = append(stackParts, castedErr.Callstack()...)
+
 	l.With(
 		zap.String("kind", castedErr.Kind()),
-		zap.Strings("callstack", castedErr.Callstack()),
+		zap.Int("status_code", castedErr.StatusCode()),
 		zap.String("caller", castedErr.Caller()),
 		zap.String("caller_name", castedErr.CallerName()),
+		zap.String("stacktrace", strings.Join(stackParts, "\n")),
 	).LogMsg(castedErr.Error())
 }
 
