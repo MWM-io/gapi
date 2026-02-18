@@ -42,5 +42,9 @@ func (m QueryParameters) Doc(builder *openapi.DocBuilder) error {
 		return nil
 	}
 
-	return builder.WithParams(m.Parameters).Error()
+	builder.
+		WithParams(m.Parameters).
+		WithError(422, "query_params_encoding", "Failed to decode query parameters")
+
+	return builder.Error()
 }
