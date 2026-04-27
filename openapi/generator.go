@@ -39,8 +39,11 @@ func PopulateReflector(reflector *openapi3.Reflector, r *mux.Router, ignoredPath
 	})
 }
 
-// BuildOperation adds the given h to the openapi3.Reflector
-func BuildOperation(reflector *openapi3.Reflector, h interface{}, method, path string) error {
+// BuildDocBuilder creates a DocBuilder populated with documentation from the handler
+// and its middlewares. It calls Doc() on all documented middlewares and the handler,
+// adds the default 500 error, and commits the operation. The returned DocBuilder
+// contains all metadata needed for both OpenAPI spec generation and MCP tool creation.
+func BuildDocBuilder(reflector *openapi3.Reflector, h interface{}, method, path string) (*DocBuilder, error) {
 	docBuilder := NewDocBuilder(reflector, method, path)
 
 	if handlerWithMiddlewares, ok := h.(handler.MiddlewareAware); ok {
@@ -49,7 +52,7 @@ func BuildOperation(reflector *openapi3.Reflector, h interface{}, method, path s
 		for _, middleware := range middlewareList {
 			if middlewareWithDoc, isDocumented := middleware.(Documented); isDocumented {
 				if err := middlewareWithDoc.Doc(docBuilder); err != nil {
-					return err
+					return docBuilder, err
 				}
 			}
 		}
@@ -57,12 +60,19 @@ func BuildOperation(reflector *openapi3.Reflector, h interface{}, method, path s
 
 	if handlerDoc, ok := h.(Documented); ok {
 		if err := handlerDoc.Doc(docBuilder); err != nil {
-			return err
+			return docBuilder, err
 		}
 	}
 
-	return docBuilder.
+	docBuilder.
 		WithError(http.StatusInternalServerError, "internal_error", "Internal server error, retry later or contact a developer if the problem persist").
-		Commit().
-		Error()
+		Commit()
+
+	return docBuilder, docBuilder.Error()
+}
+
+// BuildOperation adds the given h to the openapi3.Reflector
+func BuildOperation(reflector *openapi3.Reflector, h interface{}, method, path string) error {
+	_, err := BuildDocBuilder(reflector, h, method, path)
+	return err
 }

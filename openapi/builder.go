@@ -17,6 +17,13 @@ type DocBuilder struct {
 	path       string
 
 	err []error
+
+	// MCP fields
+	mcpEnabled  *bool         // nil = default (true), explicit true/false overrides
+	mcpToolName string        // custom tool name, empty = auto from operationID
+	bodyPtr     interface{}   // raw body struct pointer
+	paramPtrs   []interface{} // raw param struct pointers (path + query)
+	responsePtr interface{}   // raw response struct pointer
 }
 
 // NewDocBuilder returns a new doc.DocBuilder
@@ -82,12 +89,90 @@ func (b *DocBuilder) WithTags(tags ...string) *DocBuilder {
 	return b
 }
 
+// WithMCP sets whether this operation should be exposed as an MCP tool.
+// Default is true for all documented operations.
+func (b *DocBuilder) WithMCP(enabled bool) *DocBuilder {
+	b.mcpEnabled = &enabled
+	return b
+}
+
+// WithMCPToolName overrides the auto-generated MCP tool name.
+func (b *DocBuilder) WithMCPToolName(name string) *DocBuilder {
+	b.mcpToolName = name
+	return b
+}
+
+// IsMCPEnabled returns whether this operation should be exposed as an MCP tool.
+// Returns true by default unless explicitly disabled.
+func (b *DocBuilder) IsMCPEnabled() bool {
+	if b.mcpEnabled == nil {
+		return true
+	}
+	return *b.mcpEnabled
+}
+
+// MCPToolName returns the custom MCP tool name, or empty string if not set.
+func (b *DocBuilder) MCPToolName() string {
+	return b.mcpToolName
+}
+
+// BodyPtr returns the raw body struct pointer stored during WithBody.
+func (b *DocBuilder) BodyPtr() interface{} {
+	return b.bodyPtr
+}
+
+// ParamPtrs returns the raw parameter struct pointers stored during WithParams.
+func (b *DocBuilder) ParamPtrs() []interface{} {
+	return b.paramPtrs
+}
+
+// ResponsePtr returns the raw response struct pointer stored during WithResponse.
+func (b *DocBuilder) ResponsePtr() interface{} {
+	return b.responsePtr
+}
+
+// HTTPMethod returns the HTTP method for this operation.
+func (b *DocBuilder) HTTPMethod() string {
+	return b.httpMethod
+}
+
+// Path returns the URL path for this operation.
+func (b *DocBuilder) Path() string {
+	return b.path
+}
+
+// OperationID returns the operation ID, or empty string if not set.
+func (b *DocBuilder) OperationID() string {
+	if b.operation.ID != nil {
+		return *b.operation.ID
+	}
+	return ""
+}
+
+// Summary returns the operation summary, or empty string if not set.
+func (b *DocBuilder) Summary() string {
+	if b.operation.Summary != nil {
+		return *b.operation.Summary
+	}
+	return ""
+}
+
+// Description returns the operation description, or empty string if not set.
+func (b *DocBuilder) Description() string {
+	if b.operation.Description != nil {
+		return *b.operation.Description
+	}
+	return ""
+}
+
 // WithBody configure a request body to the operation
 // Allowed options :
 // - WithDescription to add a description to body
 // - WithExample to add example(s) as body
 // TODO: Find a way to support non json body like CSV, files, multi part, url encoded ...
 func (b *DocBuilder) WithBody(body interface{}, options ...BuilderOption) *DocBuilder {
+	b.bodyPtr = body
+
 	var c builderOptions
 	c.applyOptions(options...)
 
@@ -136,6 +221,8 @@ func (b *DocBuilder) WithBodyExample(value interface{}) *DocBuilder {
 // To set path parameters use a struct with 'path' tag
 // To set query parameters use a struct with 'query' tag
 func (b *DocBuilder) WithParams(body interface{}) *DocBuilder {
+	b.paramPtrs = append(b.paramPtrs, body)
+
 	if err := b.reflector.SetRequest(b.operation, body, b.httpMethod); err != nil {
 		b.err = append(b.err, err)
 	}
@@ -150,6 +237,8 @@ func (b *DocBuilder) WithParams(body interface{}) *DocBuilder {
 // - WithMimeType to set a custom contentType (default to json)
 // - WithStatusCode to set a specific status code. Default value are 204 for nil value and 200 for non nil value
 func (b *DocBuilder) WithResponse(output interface{}, options ...BuilderOption) *DocBuilder {
+	b.responsePtr = output
+
 	c := builderOptions{
 		description: "",
 		examples:    nil,
