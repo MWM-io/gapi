@@ -60,6 +60,36 @@ func (h RapiDocHandler) Serve(_ http.ResponseWriter, _ *http.Request) (interface
 	schema-style="table"
 	show-header="false"
   > </rapi-doc>
+  <script>
+    document.querySelector("rapi-doc").addEventListener("before-authorize", (event) => {
+      const params = event.detail.authParams;
+      const state = params.get("state");
+      const callback = new URL(params.get("redirect_uri"), window.location.href);
+
+      if (!state || callback.origin !== window.location.origin) {
+        return;
+      }
+
+      // window.open copies sessionStorage into the popup. Keep the fallback private to that login window.
+      const key = "gapi-rapidoc-oauth-request";
+      const request = JSON.stringify({
+        state,
+        callback: callback.origin + callback.pathname,
+        startedAt: Date.now(),
+      });
+
+      try {
+        window.sessionStorage.setItem(key, request);
+        queueMicrotask(() => {
+          if (window.sessionStorage.getItem(key) === request) {
+            window.sessionStorage.removeItem(key);
+          }
+        });
+      } catch {
+        // Providers returning state do not need the popup-local fallback.
+      }
+    });
+  </script>
 </body>
 </html>`), nil
 }
@@ -91,9 +121,11 @@ func (h RapiDocReceiverHandler) Serve(w http.ResponseWriter, _ *http.Request) (i
   <title>OAuth callback</title>
 </head>
 <body>
+  <p id="oauth-status">Completing authentication...</p>
   <script>
     (() => {
       const { search, hash, pathname, origin } = window.location;
+      const status = document.getElementById("oauth-status");
       let reply;
 
       if (search.length > 1) {
@@ -116,10 +148,42 @@ func (h RapiDocReceiverHandler) Serve(w http.ResponseWriter, _ *http.Request) (i
           errorDescription: params.get("error_description"),
         };
       } else {
+        status.textContent = "No OAuth response was received. Close this window and try again.";
+
         return;
       }
 
       window.history.replaceState(null, "", pathname);
+
+      let request;
+
+      try {
+        const key = "gapi-rapidoc-oauth-request";
+        const saved = window.sessionStorage.getItem(key);
+        window.sessionStorage.removeItem(key);
+        request = saved ? JSON.parse(saved) : null;
+      } catch {
+        // A standard OAuth response already carries its state.
+      }
+
+      const age = request ? Date.now() - request.startedAt : -1;
+
+      if (request && request.state && request.callback === origin + pathname && age >= 0 && age < 15 * 60 * 1000) {
+        if (reply.state && reply.state !== request.state) {
+          status.textContent = "The OAuth response does not match this login. Close this window and try again.";
+
+          return;
+        }
+
+        // Legacy providers such as MWM Auth omit state. Recover it only from this popup's login context.
+        reply.state = reply.state || request.state;
+      }
+
+      if (!reply.state) {
+        status.textContent = "The login context is missing or expired. Close this window and restart authentication.";
+
+        return;
+      }
 
       // RapiDoc validates state on this same-origin channel, even when COOP severs window.opener.
       if (typeof BroadcastChannel === "function") {
@@ -128,7 +192,13 @@ func (h RapiDocReceiverHandler) Serve(w http.ResponseWriter, _ *http.Request) (i
         channel.close();
       } else if (window.opener) {
         window.opener.postMessage(reply, origin);
+      } else {
+        status.textContent = "Unable to return to the documentation. Close this window and try again.";
+
+        return;
       }
+
+      window.close();
     })();
   </script>
 </body>
